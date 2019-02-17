@@ -22,8 +22,7 @@ protected:
     void check_() override;         // The overriden pure virtual method.
 
 public:
-    bool thread_enabled;            // Bool that when true, enables the functionality of the check_ method. When false, check_ keeps running in a loop, but does nothing.
-    bool thread_terminate;          // Bool that when true, stops the loop in the check_ method, allowing check_ to return.
+    const static uint8_t PCID = (uint8_t)0b00010;    // Constant ID to identify this class.
 
     struct Settings : ISettings {
         const char* imageName;      // The image name that will be searched for.

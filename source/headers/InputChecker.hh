@@ -21,8 +21,7 @@ protected:
     void check_() override;         // The overriden virtual method that will contain the condition checking code.
 
 public:
-    bool thread_enabled;            // Bool that when true, enables the functionality of the check_ method. When false, check_ keeps running in a loop, but does nothing.
-    bool thread_terminate;          // Bool that when true, stops the loop in the check_ method, allowing check_ to return.
+    const static uint8_t ICID = (uint8_t)0b00100;    // Constant ID to identify this class.
 
     struct Settings : ISettings {
         uint8_t virtual_keycode;    // The virtual keycode of the key that should be checked by the check_ method.
