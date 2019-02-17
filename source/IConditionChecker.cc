@@ -1,6 +1,12 @@
 #include "headers/IConditionChecker.hh"
 
-IConditionChecker::IConditionChecker() {}
+IConditionChecker::IConditionChecker() {
+    this->ID = this->ICCID;
+
+    this->thread_enabled = false;
+    this->thread_terminate = false;
+}
+
 IConditionChecker::~IConditionChecker() {
-    std::cout << "IConditionChecker destructor called." << std::endl;
+
 }

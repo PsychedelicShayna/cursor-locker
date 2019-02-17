@@ -21,8 +21,7 @@ void InputChecker::kill() {
 }
 
 InputChecker::InputChecker(uint8_t vkid) : IConditionChecker() {
-    this->thread_enabled = false;
-    this->thread_terminate = false;
+    this->ID = this->ICID;
 
     this->settings.mlsettings = &(this->mouseLocker_.settings);
     this->settings.virtual_keycode = vkid;
@@ -34,6 +33,5 @@ InputChecker::InputChecker(uint8_t vkid) : IConditionChecker() {
 }
 
 InputChecker::~InputChecker() {
-    std::cout << "InputChecker destructor called." << std::endl;
     kill();
 }

@@ -45,8 +45,7 @@ void ProcessChecker::kill() {
 }
 
 ProcessChecker::ProcessChecker(const char* image) : IConditionChecker() {
-    this->thread_enabled = false;
-    this->thread_terminate = false;
+    this->ID = this->PCID;
 
     this->settings.mlsettings = &(this->mouseLocker_.settings);
     this->settings.imageName = image;
@@ -57,6 +56,5 @@ ProcessChecker::ProcessChecker(const char* image) : IConditionChecker() {
 }
 
 ProcessChecker::~ProcessChecker() {
-    std::cout << "ProcessChecker destructor called." << std::endl;
     kill();
 }
