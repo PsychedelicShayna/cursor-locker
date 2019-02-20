@@ -1,7 +1,6 @@
 #ifndef INPUTCHECKER
 #define INPUTCHECKER
 
-#include <iostream> // remove this include
 #include <Windows.h>                // Windows API functions.
 #include <thread>                   // Multi-threading support.
 #include <cstdint>                  // Alternative integer definitions.

@@ -2,10 +2,11 @@
 #define UICORE
 
 #include <Windows.h>
-#include <sstream>
-#include <string>
-#include <cstdint>
 #include <conio.h>
+#include <cstdint>
+#include <iostream>
+#include <string>
+#include <sstream>
 #include <cmath>
 
 #include "IConditionChecker.hh"

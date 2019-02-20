@@ -1,10 +1,4 @@
 #include <iostream>
-#include <string>
-#include <conio.h>
-#include <vector>
-#include <functional>
-#include <array>
-#include <map>
 
 #include "headers/MouseLocker.hh"
 #include "headers/InputChecker.hh"

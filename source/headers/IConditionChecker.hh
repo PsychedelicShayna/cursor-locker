@@ -1,7 +1,6 @@
 #ifndef ICONDITIONCHECKER
 #define ICONDITIONCHECKER
 
-#include <iostream> // remove this include
 #include <thread>       // Multi-threading support.
 #include <cstdint>      // Alternative integer definitions.
 
