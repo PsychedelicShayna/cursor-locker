@@ -25,7 +25,7 @@ public:
     const static uint8_t PCID = (uint8_t)0b00010;    // Constant ID to identify this class.
 
     struct Settings : ISettings {
-        const char* imageName;      // The image name that will be searched for.
+        char* imageName;            // The image name that will be searched for.
         uint16_t polling_rate;      // How frequently to check for the process (in milliseconds)
         bool play_sound;            // Whether or not a sound should be played when the process is found / not found.
     } settings;

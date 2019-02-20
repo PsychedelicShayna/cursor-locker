@@ -48,7 +48,9 @@ ProcessChecker::ProcessChecker(const char* image) : IConditionChecker() {
     this->ID = this->PCID;
 
     this->settings.mlsettings = &(this->mouseLocker_.settings);
-    this->settings.imageName = image;
+    this->settings.imageName = new char[strlen(image)];
+    strcpy(this->settings.imageName, image);
+
     this->settings.play_sound = true;
     this->settings.polling_rate = 500;
 
@@ -57,4 +59,6 @@ ProcessChecker::ProcessChecker(const char* image) : IConditionChecker() {
 
 ProcessChecker::~ProcessChecker() {
     kill();
+
+    delete this->settings.imageName;
 }
