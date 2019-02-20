@@ -10,11 +10,12 @@
 #include "headers/InputChecker.hh"
 #include "headers/ProcessChecker.hh"
 #include "headers/ParamParser.hh"
-#include "headers/UserInterface.hh"
+#include "headers/UiCore.hh"
 
 int main(int argc, char* argv[]) {
 
-    std::cout << "Press enter to exit." << std::endl;
-    std::cin.get();
+    UiCore uiCore;
+    uiCore.Dialogue_Main();
+    
     return 0;
 }
