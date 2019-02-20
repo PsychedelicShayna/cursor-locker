@@ -1,7 +1,6 @@
 #ifndef PROCESSCHECKER
 #define PROCESSCHECKER
 
-#include <iostream> // remove this include
 #include <Windows.h>    // Windows API functionality.
 #include <TlHelp32.h>   // Additional Windows API functionality.
 #include <thread>       // Multi-threading support.
