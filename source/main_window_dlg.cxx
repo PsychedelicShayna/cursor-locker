@@ -180,7 +180,6 @@ void MainWindow::log_to_console(const QList<QString>& message_list) {
 
     ui->txt_console->moveCursor(QTextCursor::End);
     ui->txt_console->insertPlainText(concatenated_messages);
-    ui->txt_console->moveCursor(QTextCursor::End);
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
