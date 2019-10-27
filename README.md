@@ -10,3 +10,5 @@ If you plan on building this yourself, you will need a [Qt5 Environment](https:/
 
 The repository includes a Qt `.pro` project file which is already pre-configured and should work straight out of the box. You will however need a compatible compiler such as MSVC15 or MSVC17 -- or really just any compiler that is compatible with Windows' libraries.
 
+## Screenshot
+![](screenshots/screenshot-1.png?raw=true)
