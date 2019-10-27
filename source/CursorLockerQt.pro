@@ -19,3 +19,6 @@ HEADERS += \
 
 FORMS += \
     main_window_dlg.ui
+
+LIBS += \
+    -lUser32
