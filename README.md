@@ -1,8 +1,14 @@
-# Mouselock
+# Cursor Locker Redux
 
-This is the source code for a Skyrim utility published on the Nexus. https://www.nexusmods.com/skyrim/mods/95474
+This is the repository for a program hosted on NexusMods https://www.nexusmods.com/skyrim/mods/95474
 
-If you're like me, and you constantly have other windows open on your other monitors, you probably experienced a phenomena at some point where if you scroll your mouse in game, it can scroll down a window on a completely separate monitor. This is due to the fact that Skyrim does not actually lock the cursor while you're playing, instead the cursor is actually just invisibly moving around in the background, which means your cursor can also wander onto other monitors and perform inputs that were never intended. 
+Compared to the original Mouselock utility, the redux version has a graphical user interface, as well as bug fixes, and all around cleaner and more efficient programming. You can find pre-compiled binaries in the releases section if you'd rather not compile it yourself. This project uses Qt5 which is cross-platform, however it is currently only compatible with Windows since it relies on WinAPI to function.
 
-To solve this pet peeve of mine, I wrote a small C++ program that essentially just locks your cursor to the center of your main monitor upon pressing a key. This works universally, so if there are any other games that don't lock the cursor, this program will work on them as well, since it's not really program specific. Optionally, you can also set it so that it automatically starts and stops when another program starts and stops.
 
+## Building
+If you plan on building this yourself, you will need a [Qt5 Environment](https://www.qt.io/download-open-source) as well as a copy of the dynamic link libraries needed for Qt to function, since by default Qt does not statically link its own libraries. You can also find the necessary libraries included in the pre-compiled versions in the releases section.
+
+The repository includes a Qt `.pro` project file which is already pre-configured and should work straight out of the box. You will however need a compatible compiler such as MSVC15 or MSVC17 -- or really just any compiler that is compatible with Windows' libraries.
+
+## Screenshot
+![](screenshots/screenshot-1.png?raw=true)
