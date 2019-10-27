@@ -186,6 +186,15 @@ void MainWindow::log_to_console(const QList<QString>& message_list) {
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
+    setWindowFlags(
+        Qt::Dialog |
+        Qt::CustomizeWindowHint |
+        Qt::WindowTitleHint |
+        Qt::WindowCloseButtonHint |
+        Qt::WindowMinimizeButtonHint |
+        Qt::WindowMaximizeButtonHint
+    );
+
     update_frequency_group_title();
 
     numerical_vkid = 0x6A;

@@ -11,12 +11,9 @@
 #include <sstream>
 #include <fstream>
 #include <string>
-#include <vector>
 #include <thread>
 #include <atomic>
 #include <mutex>
-
-#include <algorithm>
 
 namespace Ui {
     class MainWindow;
