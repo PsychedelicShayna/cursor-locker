@@ -31,6 +31,7 @@ private:
     [[noreturn]] void cursor_locker_worker();
 
     std::atomic<bool> activation_mode;
+    std::atomic<char*> process_image;
     std::atomic<uint32_t> numerical_vkid;
     [[noreturn]] void activator_worker();
 

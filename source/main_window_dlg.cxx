@@ -20,7 +20,7 @@ void MainWindow::activator_worker() {
 
     for(;;Sleep(activation_mode ? 1000 : 50)) {
         if(activation_mode) {
-            const std::string& process_name = ui->lin_process->text().toStdString();
+            if(process_image == nullptr) continue;
 
             HANDLE running_tasks_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0);
 
@@ -36,7 +36,7 @@ void MainWindow::activator_worker() {
                     bool process_found = false;
 
                     do {
-                        if(!stricmp(process_name.data(), process_entry_32.szExeFile)) {
+                        if(!stricmp(process_image.load(), process_entry_32.szExeFile)) {
                             process_found = true;
                             break;
                         }
@@ -44,10 +44,10 @@ void MainWindow::activator_worker() {
 
                     if(process_found && !cursor_locker_activated) {
                         set_lock_state(true);
-                        log_to_console({"Found running process: ", QString::fromStdString(process_name)});
+                        log_to_console({"Found running process: ", QString::fromStdString(process_image.load())});
                     } else if(!process_found && cursor_locker_activated) {
                         set_lock_state(false);
-                        log_to_console({"Process lost: ", QString::fromStdString(process_name)});
+                        log_to_console({"Process lost: ", QString::fromStdString(process_image.load())});
                     }
                 }
             }
@@ -143,6 +143,14 @@ void MainWindow::on_btn_edit_activation_clicked() {
     } else if(ui->btn_edit_activation->text() == "Confirm") {
         if(ui->cbx_activation->currentIndex()) {
             ui->lin_process->setEnabled(false);
+
+            const std::string& new_process_image = ui->lin_process->text().toStdString();
+
+            if(process_image.load() != nullptr) delete process_image.load();
+            process_image = new char[new_process_image.size() + 1];
+
+            std::fill(process_image.load(), process_image.load() + new_process_image.size() + 1, 0x00);
+            std::copy(new_process_image.begin(), new_process_image.end(), process_image.load());
         }
         else {
             ui->lin_vkid->setEnabled(false);
@@ -196,6 +204,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     update_frequency_group_title();
 
+    process_image = nullptr;
     numerical_vkid = 0x6A;
 
     connect(ui->hslid_lock_frequency, SIGNAL(valueChanged(int)), this, SLOT(update_frequency_group_title()));
