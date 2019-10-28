@@ -217,6 +217,10 @@ void MainWindow::logToConsole(const QList<QString>& message_list) {
     ui->txt_console->insertPlainText(concatenated_messages);
 }
 
+void MainWindow::closeEvent(QCloseEvent*) {
+    ClipCursor(NULL);
+}
+
 bool MainWindow::LoadStylesheetFile(const std::string& file_path) {
     std::ifstream input_stream(file_path, std::ios::binary);
     if(input_stream.good()) {
