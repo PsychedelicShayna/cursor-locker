@@ -180,6 +180,8 @@ void MainWindow::on_btn_edit_activation_parameter_clicked() {
             }
 
             case MONITOR_FOR::PROCESS_IMAGE : {
+                delete monitoringWorkerImage;
+
                 const std::string& process_image_string = ui->lin_activation_parameter->text().toStdString();
                 monitoringWorkerImage = new char[process_image_string.size() + 1];
                 std::copy(process_image_string.data(), process_image_string.data() + process_image_string.size() + 1, monitoringWorkerImage.load());
@@ -187,6 +189,8 @@ void MainWindow::on_btn_edit_activation_parameter_clicked() {
             }
 
             case MONITOR_FOR::WINDOW_TITLE : {
+                delete monitoringWorkerTitle;
+
                 const std::string& window_title_string = ui->lin_activation_parameter->text().toStdString();
                 monitoringWorkerTitle = new char[window_title_string.size() + 1];
                 std::copy(window_title_string.data(), window_title_string.data() + window_title_string.size() + 1, monitoringWorkerTitle.load());
