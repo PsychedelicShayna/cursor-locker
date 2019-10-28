@@ -196,10 +196,6 @@ void MainWindow::on_btn_edit_activation_parameter_clicked() {
                 std::copy(window_title_string.data(), window_title_string.data() + window_title_string.size() + 1, monitoringWorkerTitle.load());
                 break;
             }
-
-            default : {
-                break;
-            }
         }
 
         ui->lin_activation_parameter->setEnabled(false);
