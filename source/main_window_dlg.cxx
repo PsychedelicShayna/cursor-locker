@@ -26,7 +26,7 @@ void MainWindow::monitoringWorker() {
 
                 clip_state_toggle ^= 1;
 
-                ClipCursor(clip_state_toggle ? &clip_cursor_rect : NULL);
+                ClipCursor(clip_state_toggle ? &clip_cursor_rect : nullptr);
 
                 Beep(clip_state_toggle ? 500 : 700, 20);
                 Beep(clip_state_toggle ? 700 : 500, 20);
@@ -69,7 +69,7 @@ void MainWindow::monitoringWorker() {
                             Beep(700, 20);
                         }
                     } else {
-                        ClipCursor(NULL);
+                        ClipCursor(nullptr);
 
                         if(!first_find) {
                             logToConsole({"Lost target process: ", QString(monitoringWorkerImage)});
@@ -105,7 +105,7 @@ void MainWindow::monitoringWorker() {
                     Beep(700, 20);
                 }
             } else {
-                    ClipCursor(NULL);
+                    ClipCursor(nullptr);
 
                     if(!first_find) {
                         logToConsole({"Lost target window: ", QString(monitoringWorkerTitle)});
@@ -218,7 +218,7 @@ void MainWindow::logToConsole(const QList<QString>& message_list) {
 }
 
 void MainWindow::closeEvent(QCloseEvent*) {
-    ClipCursor(NULL);
+    ClipCursor(nullptr);
 }
 
 bool MainWindow::LoadStylesheetFile(const std::string& file_path) {
