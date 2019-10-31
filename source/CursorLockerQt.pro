@@ -15,7 +15,8 @@ SOURCES += \
     main_window_dlg.cxx
 
 HEADERS += \
-    main_window_dlg.hxx
+    main_window_dlg.hxx \
+    json.hxx
 
 FORMS += \
     main_window_dlg.ui

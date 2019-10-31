@@ -15,43 +15,52 @@
 #include <atomic>
 #include <mutex>
 
+#include "json.hxx"
+
 namespace Ui {
     class MainWindow;
 }
+
+using Json = nlohmann::json;
+
+enum struct MONITOR_FOR;
 
 class MainWindow : public QMainWindow {
 private:
     Ui::MainWindow* ui;
     Q_OBJECT
 
-    std::atomic<uint32_t> target_position_x;
-    std::atomic<uint32_t> target_position_y;
+    RECT desktopWindowRect;
 
-    std::atomic<bool> cursor_locker_activated;
-    [[noreturn]] void cursor_locker_worker();
+    // Determines what the mopnitoringWorker should monitor for in order to activate the locker.
+    std::atomic<MONITOR_FOR> monitoringWorkerMode;
 
-    std::atomic<bool> activation_mode;
-    std::atomic<char*> process_image;
-    std::atomic<uint32_t> numerical_vkid;
-    [[noreturn]] void activator_worker();
+    // Stores the VKID of the key that monitoringWorker should monitor for, when configured in keybinding mode.
+    std::atomic<uint32_t> monitoringWorkerVkid;
 
-    std::mutex console_mutex;
+    // Stores the image name of the process that monitoringWorker should monitor for, when configured in process presence mode.
+    std::atomic<char*> monitoringWorkerImage;
 
-    void log_to_console(const QList<QString>&);
+    // Stores the title of the window that monitoringWorker should monitor for, when configured in window monitoring mode.
+    std::atomic<char*> monitoringWorkerTitle;
+
+    // The target of MonitoringThread. Monitors for conditions, and activates/deactivates the locking mechanism accordingly.
+    [[noreturn]] void monitoringWorker();
+
+    std::mutex consoleMutex; // Multiple threads may log to the console, therefore a mutex is used to avoid data races.
+    void logToConsole(const QList<QString>&);
+
+    void closeEvent(QCloseEvent*);
 
 private slots:
-    void update_frequency_group_title();
-    void update_resolution_center();
-
-    void invert_lock_state();
-    void set_lock_state(bool);
-
-    void on_btn_edit_activation_clicked();
-    void on_cbx_activation_currentIndexChanged(int);
+    void on_cbx_activation_method_currentIndexChanged(int);
+    void on_btn_edit_activation_parameter_clicked();
 
 public:
-    std::thread cursor_locker_thread;
-    std::thread activator_thread;
+    // Thread that runs monitoringWorker
+    std::thread MonitoringThread;
+
+    bool LoadStylesheetFile(const std::string&);
 
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();

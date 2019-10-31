@@ -1,183 +1,221 @@
 #include "main_window_dlg.hxx"
 #include "ui_main_window_dlg.h"
 
-void MainWindow::cursor_locker_worker() {
-    std::stringstream conversion_stream;
-    conversion_stream << std::this_thread::get_id();
-    log_to_console({"Cursor locker worker started on thread ", QString::fromStdString(conversion_stream.str())});
+enum struct MONITOR_FOR {
+    NOTHING         =   0b00000000,
+    KEYBIND         =   0b00000001,
+    PROCESS_IMAGE   =   0b00000010,
+    WINDOW_TITLE    =   0b00000100,
+};
 
-    for(;;Sleep(1000)) {
-        for(;cursor_locker_activated;Sleep(ui->hslid_lock_frequency->value())) {
-            SetCursorPos(target_position_x, target_position_y);
-        }
-    }
-}
+void MainWindow::monitoringWorker() {
+    for(;;) {
+        if(monitoringWorkerMode == MONITOR_FOR::KEYBIND) {
+            static bool clip_state_toggle = 0;
+            
+            if((GetAsyncKeyState(monitoringWorkerVkid) & 0x8000) != 0) {
+                clip_state_toggle ^= 1;
+                
+                ClipCursor(clip_state_toggle ? &desktopWindowRect : nullptr);
 
-void MainWindow::activator_worker() {
-    std::stringstream conversion_stream;
-    conversion_stream << std::this_thread::get_id();
-    log_to_console({"Activator worker started on thread ", QString::fromStdString(conversion_stream.str())});
+                Beep(clip_state_toggle ? 500 : 700, 20);
+                Beep(clip_state_toggle ? 700 : 500, 20);
 
-    for(;;Sleep(activation_mode ? 1000 : 50)) {
-        if(activation_mode) {
-            if(process_image == nullptr) continue;
+                logToConsole({clip_state_toggle ? "Activated" : "Deactivated", " lock."});
 
+                Sleep(500);
+            } else {
+                ClipCursor(clip_state_toggle ? &desktopWindowRect : nullptr);
+            }
+            
+            Sleep(60);
+        } else if(monitoringWorkerMode == MONITOR_FOR::PROCESS_IMAGE) {
             HANDLE running_tasks_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0);
 
             if(running_tasks_snapshot == INVALID_HANDLE_VALUE) {
-
-                ui->txt_console->appendPlainText("! Invalid handle value for snapshot of type TH32CS_SNAPPROCESS. Cannot see running tasks.");
+                logToConsole({"Invalid handle value for snapshot of type TH32CS_SNAPPROCESS. Cannot see running tasks."});
                 continue;
             } else {
                 PROCESSENTRY32 process_entry_32;
                 process_entry_32.dwSize = sizeof(PROCESSENTRY32);
 
                 if(Process32First(running_tasks_snapshot, &process_entry_32)) {
+                    static bool first_find = true;
                     bool process_found = false;
 
                     do {
-                        if(!stricmp(process_image.load(), process_entry_32.szExeFile)) {
+                        if(!stricmp(monitoringWorkerImage, process_entry_32.szExeFile)) {
                             process_found = true;
                             break;
                         }
                     } while(Process32Next(running_tasks_snapshot, &process_entry_32));
 
-                    if(process_found && !cursor_locker_activated) {
-                        set_lock_state(true);
-                        log_to_console({"Found running process: ", QString::fromStdString(process_image.load())});
-                    } else if(!process_found && cursor_locker_activated) {
-                        set_lock_state(false);
-                        log_to_console({"Process lost: ", QString::fromStdString(process_image.load())});
+                    if(process_found) {
+                        ClipCursor(&desktopWindowRect);
+
+                        if(first_find) {
+                            logToConsole({"Found target process: ", QString(monitoringWorkerImage)});
+                            first_find = false;
+
+                            Beep(500, 20);
+                            Beep(700, 20);
+                        }
+                    } else {
+                        ClipCursor(nullptr);
+
+                        if(!first_find) {
+                            logToConsole({"Lost target process: ", QString(monitoringWorkerImage)});
+                            first_find = true;
+
+                            Beep(700, 20);
+                            Beep(500, 20);
+                        }
                     }
                 }
             }
 
             CloseHandle(running_tasks_snapshot);
-        } else {
-            if((GetAsyncKeyState(numerical_vkid) & 0x8000) != 0) {
-                invert_lock_state();
-                Sleep(500);
+
+            Sleep(1000);
+        } else if(monitoringWorkerMode == MONITOR_FOR::WINDOW_TITLE) {
+            static bool first_find = true;
+
+            char window_title_buffer[256];
+            std::fill(window_title_buffer, window_title_buffer + sizeof(window_title_buffer), 0x00);
+
+            HWND foreground_window = GetForegroundWindow();
+            GetWindowTextA(foreground_window, window_title_buffer, sizeof(window_title_buffer));
+
+            if(!stricmp(monitoringWorkerTitle, window_title_buffer)) {
+                ClipCursor(&desktopWindowRect);
+
+                if(first_find) {
+                    logToConsole({"Found target window: ", QString(monitoringWorkerTitle)});
+                    first_find = false;
+
+                    Beep(500, 20);
+                    Beep(700, 20);
+                }
+            } else {
+                    ClipCursor(nullptr);
+
+                    if(!first_find) {
+                        logToConsole({"Lost target window: ", QString(monitoringWorkerTitle)});
+                        first_find = true;
+
+                        Beep(700, 20);
+                        Beep(500, 20);
+                    }
             }
+
+            Sleep(1000);
         }
     }
 }
 
-void MainWindow::update_frequency_group_title() {
-    const uint32_t current_frequency = ui->hslid_lock_frequency->value();
-
-    QString message_string("Locking Frequency [ 1ms - 200ms ] (");
-    message_string += QString::fromStdString(std::to_string(current_frequency));
-    message_string += ")";
-
-    ui->grp_lock_frequency->setTitle(message_string);
-}
-
-void MainWindow::update_resolution_center() {
-    const uint32_t resolution_x = ui->sbox_resX->value();
-    const uint32_t resolution_y = ui->sbox_resY->value();
-
-    target_position_x = resolution_x / 2;
-    target_position_y = resolution_y / 2;
-
-    QString target_position_string("~> ");
-
-    target_position_string += QString::fromStdString(std::to_string(target_position_x));
-    target_position_string += "x";
-    target_position_string += QString::fromStdString(std::to_string(target_position_y));
-
-    ui->lbl_center->setText(target_position_string);
-
-    log_to_console({
-        "Center resolution calculated (",
-        QString::fromStdString(std::to_string(resolution_x)),
-        "/2=", QString::fromStdString(std::to_string(target_position_x)),
-        ", ", QString::fromStdString(std::to_string(resolution_y)),
-        "/2=", QString::fromStdString(std::to_string(target_position_y)),
-        ") ", target_position_string
-    });
-}
-
-void MainWindow::invert_lock_state() {
-    cursor_locker_activated = !cursor_locker_activated;
-
-    if(cursor_locker_activated) {
-        ui->btn_lock_state->setText("Unlock");
-        Beep(500, 20);
-        Beep(700, 20);
-    }
-    else {
-        ui->btn_lock_state->setText("Lock");
-        Beep(700, 20);
-        Beep(500, 20);
-    }
-
-    log_to_console({"Lock ", cursor_locker_activated ? "activated." : "deactivated."});
-}
-
-void MainWindow::set_lock_state(bool state) {
-    cursor_locker_activated = state;
-
-    if(state) {
-        ui->btn_lock_state->setText("Unlock");
-        Beep(500, 20);
-        Beep(700, 20);
-    }
-
-    else {
-        ui->btn_lock_state->setText("Lock");
-        Beep(700, 20);
-        Beep(500, 20);
-    }
-
-    log_to_console({"Lock ", cursor_locker_activated ? "activated." : "deactivated."});
-}
-
-void MainWindow::on_btn_edit_activation_clicked() {
-    if(ui->btn_edit_activation->text() == "Edit") {
-        ui->cbx_activation->setEnabled(false);
-
-        if(ui->cbx_activation->currentIndex()) ui->lin_process->setEnabled(true);
-        else ui->lin_vkid->setEnabled(true);
-
-        ui->btn_edit_activation->setText("Confirm");
-    } else if(ui->btn_edit_activation->text() == "Confirm") {
-        if(ui->cbx_activation->currentIndex()) {
-            ui->lin_process->setEnabled(false);
-
-            const std::string& new_process_image = ui->lin_process->text().toStdString();
-
-            if(process_image.load() != nullptr) delete process_image.load();
-            process_image = new char[new_process_image.size() + 1];
-
-            std::fill(process_image.load(), process_image.load() + new_process_image.size() + 1, 0x00);
-            std::copy(new_process_image.begin(), new_process_image.end(), process_image.load());
+void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
+    switch(index) {
+        case 0 : {
+            monitoringWorkerMode = MONITOR_FOR::NOTHING;
+            ui->lin_activation_parameter->setText("");
+            ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
+            logToConsole({"Activation mode set to nothing."});
+            
+            ClipCursor(NULL);
+            
+            Beep(700, 20);
+            Beep(600, 20);
+            Beep(500, 20);
+            
+            break;
         }
-        else {
-            ui->lin_vkid->setEnabled(false);
 
-            try {
+        case 1 : {
+            monitoringWorkerMode = MONITOR_FOR::KEYBIND;
+            
+            if(monitoringWorkerVkid.load() != 0) {
                 std::stringstream conversion_stream;
-                conversion_stream << std::hex << ui->lin_vkid->text().toStdString();
-                uint32_t converted; conversion_stream >> converted;
-                numerical_vkid = converted;
-
-            } catch (const std::exception& exception) {
-                log_to_console({"Exception when converting VKID into a number: ", exception.what()});
+                conversion_stream << "0x" << std::uppercase << std::hex << monitoringWorkerVkid.load();
+            
+                std::string converted_string;
+                conversion_stream >> converted_string;
+            
+                ui->lin_activation_parameter->setText(QString::fromStdString(converted_string));
+            } else {
+                ui->lin_activation_parameter->setText("");
             }
-       }
+            
+            ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
+            logToConsole({"Activation mode set to keybind, VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html"});
+            break;
+        }
 
-        ui->cbx_activation->setEnabled(true);
-        ui->btn_edit_activation->setText("Edit");
+        case 2 : {
+            monitoringWorkerMode = MONITOR_FOR::PROCESS_IMAGE;
+            ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerImage.load()));
+            ui->lin_activation_parameter->setPlaceholderText("E.g. TESV.exe, SkyrimSE.exe, etc");
+            logToConsole({"Activation mode set to process image."});
+            break;
+        }
+
+        case 3 : {
+            monitoringWorkerMode = MONITOR_FOR::WINDOW_TITLE;
+            ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerTitle.load()));
+            ui->lin_activation_parameter->setPlaceholderText("E.g. Skyrim, Skyrim Special Edition, etc");
+            logToConsole({"Activation mode set to window title."});
+            break;
+        }
     }
 }
 
-void MainWindow::on_cbx_activation_currentIndexChanged(int index) {
-    activation_mode = index;
-    log_to_console({"Activation mode changed to ", index ? "process presence." : "keybinding."});
+void MainWindow::on_btn_edit_activation_parameter_clicked() {
+    if(ui->btn_edit_activation_parameter->text() == "Edit" && monitoringWorkerMode != MONITOR_FOR::NOTHING) {
+        ui->lin_activation_parameter->setEnabled(true);
+        ui->btn_edit_activation_parameter->setText("Confirm");
+    } else if(ui->btn_edit_activation_parameter->text() == "Confirm") {
+        switch(monitoringWorkerMode) {
+            case MONITOR_FOR::KEYBIND : {
+                try {
+                    std::stringstream conversion_stream;
+                    conversion_stream << std::hex << ui->lin_activation_parameter->text().toStdString();
+
+                    uint32_t converted_vkid;
+                    conversion_stream >> converted_vkid;
+
+                    monitoringWorkerVkid = converted_vkid;
+                } catch (const std::exception& exception) {
+                    logToConsole({"Exception when trying to convert hexadecimal VKID text to an integer: ", exception.what()});
+                }
+
+                break;
+            }
+
+            case MONITOR_FOR::PROCESS_IMAGE : {
+                delete monitoringWorkerImage;
+
+                const std::string& process_image_string = ui->lin_activation_parameter->text().toStdString();
+                monitoringWorkerImage = new char[process_image_string.size() + 1];
+                std::copy(process_image_string.data(), process_image_string.data() + process_image_string.size() + 1, monitoringWorkerImage.load());
+                break;
+            }
+
+            case MONITOR_FOR::WINDOW_TITLE : {
+                delete monitoringWorkerTitle;
+
+                const std::string& window_title_string = ui->lin_activation_parameter->text().toStdString();
+                monitoringWorkerTitle = new char[window_title_string.size() + 1];
+                std::copy(window_title_string.data(), window_title_string.data() + window_title_string.size() + 1, monitoringWorkerTitle.load());
+                break;
+            }
+        }
+
+        ui->lin_activation_parameter->setEnabled(false);
+        ui->btn_edit_activation_parameter->setText("Edit");
+    }
 }
 
-void MainWindow::log_to_console(const QList<QString>& message_list) {
-    std::lock_guard<std::mutex> console_mutex_guard(console_mutex);
+void MainWindow::logToConsole(const QList<QString>& message_list) {
+    std::lock_guard<std::mutex> console_mutex_guard(consoleMutex);
     QString concatenated_messages;
 
     for(const auto& message : message_list) {
@@ -188,6 +226,23 @@ void MainWindow::log_to_console(const QList<QString>& message_list) {
 
     ui->txt_console->moveCursor(QTextCursor::End);
     ui->txt_console->insertPlainText(concatenated_messages);
+}
+
+void MainWindow::closeEvent(QCloseEvent*) {
+    ClipCursor(nullptr);
+}
+
+bool MainWindow::LoadStylesheetFile(const std::string& file_path) {
+    std::ifstream input_stream(file_path, std::ios::binary);
+    if(input_stream.good()) {
+        std::string style_sheet((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
+        input_stream.close();
+
+        setStyleSheet(QString::fromStdString(style_sheet));
+        return true;
+    } else {
+        return false;
+    }
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -201,43 +256,90 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         Qt::WindowMinimizeButtonHint |
         Qt::WindowMaximizeButtonHint
     );
-
-    update_frequency_group_title();
-
-    process_image = nullptr;
-    numerical_vkid = 0x6A;
-
-    connect(ui->hslid_lock_frequency, SIGNAL(valueChanged(int)), this, SLOT(update_frequency_group_title()));
-    connect(ui->sbox_resX, SIGNAL(valueChanged(int)), this, SLOT(update_resolution_center()));
-    connect(ui->sbox_resY, SIGNAL(valueChanged(int)), this, SLOT(update_resolution_center()));
-    connect(ui->btn_lock_state, SIGNAL(clicked()), this, SLOT(invert_lock_state()));
-
+    
     HWND desktop_window_handle = GetDesktopWindow();
-    RECT screen_rect;
+    GetWindowRect(desktop_window_handle, &desktopWindowRect);
+    CloseHandle(desktop_window_handle);
+    
+    resize(20 * desktopWindowRect.right / 100, 10 * desktopWindowRect.bottom / 100);
 
-    GetWindowRect(desktop_window_handle, &screen_rect);
+    monitoringWorkerMode    = MONITOR_FOR::NOTHING;
+    monitoringWorkerVkid    = 0x00;
+    monitoringWorkerImage   = new char[2];
+    monitoringWorkerTitle   = new char[2];
 
-    ui->sbox_resX->setValue(screen_rect.right);
-    ui->sbox_resY->setValue(screen_rect.bottom);
-
-    cursor_locker_activated = false;
-    cursor_locker_thread = std::thread([this]() -> void { cursor_locker_worker(); });
-
-    activation_mode = 0;
-    activator_thread = std::thread([this]() -> void { activator_worker(); });
-
-    log_to_console({"Detected resolution: ", QString::fromStdString(std::to_string(screen_rect.right)), "x", QString::fromStdString(std::to_string(screen_rect.bottom))});
-
-    std::ifstream input_stream("./style_sheet.qss", std::ios::binary);
-
+    std::fill(monitoringWorkerImage.load(), monitoringWorkerImage.load() + 1, 0x00);
+    std::fill(monitoringWorkerTitle.load(), monitoringWorkerTitle.load() + 1, 0x00);
+    
+    std::ifstream input_stream("./defaults.json", std::ios::binary);
+    
     if(input_stream.good()) {
-        std::string style_sheet((std::istreambuf_iterator<char>(input_stream)),(std::istreambuf_iterator<char>()));
+        std::string raw_json_string((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
         input_stream.close();
-
-        setStyleSheet(QString::fromStdString(style_sheet));
-        log_to_console({"Applied style_sheet.qss"});
+        
+        Json default_values = Json::parse(raw_json_string);
+        
+        logToConsole({"Default values from defaults.json have been parsed."});
+        
+        for(const auto& pair : default_values.items()) {
+            if(pair.key() == "vkid") {
+                std::stringstream conversion_stream;
+                conversion_stream << std::hex << pair.value().get<std::string>();
+                
+                uint32_t converted_value = 0;
+                conversion_stream >> converted_value;
+                
+                monitoringWorkerVkid = converted_value;
+                
+                logToConsole({"Loaded VKID(", QString::fromStdString(pair.value()), ") from defaults.json"});
+            } else if(pair.key() == "image") {
+                const std::string& image = pair.value();
+                
+                char* heap_copy = new char[image.size() + 1];                
+                std::copy(image.data(), image.data() + image.size() + 1, heap_copy);
+                
+                delete monitoringWorkerImage.load();                
+                monitoringWorkerImage.store(heap_copy);                
+                
+                logToConsole({"Loaded image name(", QString::fromStdString(pair.value()), ") from defaults.json"});
+            } else if(pair.key() == "title") {
+                const std::string& title = pair.value();
+                
+                char* heap_copy = new char[title.size() + 1];
+                std::copy(title.data(), title.data() + title.size() + 1, heap_copy);
+                
+                delete monitoringWorkerTitle.load();
+                monitoringWorkerTitle.store(heap_copy);
+                
+                logToConsole({"Loaded window title(", QString::fromStdString(pair.value()),") from defaults.json"});
+            }
+        }
+        
     } else {
-        log_to_console({"Cannot find style_sheet.qss, using default style."});
+        std::ofstream output_stream("./defaults.json", std::ios::binary);
+        
+        if(output_stream.good()) {
+            Json json_template = {
+                {"vkid", ""},
+                {"image", ""},
+                {"title", ""}
+            };
+            
+            const std::string& dumped_json = json_template.dump(4);
+            
+            output_stream.write(dumped_json.data(), dumped_json.size());
+            output_stream.close();
+        }
+        
+        logToConsole({"Generated defaults.json. If you wish to store default values, please fill it."});
+    }
+        
+    MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
+    
+    if(LoadStylesheetFile("./style_sheet.qss")) {
+        logToConsole({"style_sheet.qss Loaded"});
+    } else {
+        logToConsole({"Cannot open style_sheet.qss, using default style."});
     }
 }
 
