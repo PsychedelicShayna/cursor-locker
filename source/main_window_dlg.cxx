@@ -9,16 +9,6 @@ enum struct MONITOR_FOR {
 };
 
 void MainWindow::monitoringWorker() {
-    HWND desktop_window = GetDesktopWindow();
-
-    RECT clip_cursor_rect;
-    GetWindowRect(desktop_window, &clip_cursor_rect);
-
-    clip_cursor_rect.bottom /= 2;
-    clip_cursor_rect.right /= 2;
-    clip_cursor_rect.top = clip_cursor_rect.bottom;
-    clip_cursor_rect.left = clip_cursor_rect.right;
-
     for(;;) {
         if(monitoringWorkerMode == MONITOR_FOR::KEYBIND) {
             static bool clip_state_toggle = 0;
@@ -26,7 +16,7 @@ void MainWindow::monitoringWorker() {
             if((GetAsyncKeyState(monitoringWorkerVkid) & 0x8000) != 0) {
                 clip_state_toggle ^= 1;
                 
-                ClipCursor(clip_state_toggle ? &clip_cursor_rect : nullptr);
+                ClipCursor(clip_state_toggle ? &desktopWindowRect : nullptr);
 
                 Beep(clip_state_toggle ? 500 : 700, 20);
                 Beep(clip_state_toggle ? 700 : 500, 20);
@@ -35,7 +25,7 @@ void MainWindow::monitoringWorker() {
 
                 Sleep(500);
             } else {
-                ClipCursor(clip_state_toggle ? &clip_cursor_rect : nullptr);
+                ClipCursor(clip_state_toggle ? &desktopWindowRect : nullptr);
             }
             
             Sleep(60);
@@ -61,7 +51,7 @@ void MainWindow::monitoringWorker() {
                     } while(Process32Next(running_tasks_snapshot, &process_entry_32));
 
                     if(process_found) {
-                        ClipCursor(&clip_cursor_rect);
+                        ClipCursor(&desktopWindowRect);
 
                         if(first_find) {
                             logToConsole({"Found target process: ", QString(monitoringWorkerImage)});
@@ -97,7 +87,7 @@ void MainWindow::monitoringWorker() {
             GetWindowTextA(foreground_window, window_title_buffer, sizeof(window_title_buffer));
 
             if(!stricmp(monitoringWorkerTitle, window_title_buffer)) {
-                ClipCursor(&clip_cursor_rect);
+                ClipCursor(&desktopWindowRect);
 
                 if(first_find) {
                     logToConsole({"Found target window: ", QString(monitoringWorkerTitle)});
@@ -259,6 +249,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         Qt::WindowMinimizeButtonHint |
         Qt::WindowMaximizeButtonHint
     );
+    
+    HWND desktop_window_handle = GetDesktopWindow();
+    GetWindowRect(desktop_window_handle, &desktopWindowRect);
+    CloseHandle(desktop_window_handle);
+    
+    resize(20 * desktopWindowRect.right / 100, 10 * desktopWindowRect.bottom / 100);
 
     monitoringWorkerMode    = MONITOR_FOR::NOTHING;
     monitoringWorkerVkid    = 0x00;
@@ -332,13 +328,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     }
         
     MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
-
-    HWND desktop_window_handle = GetDesktopWindow();
     
-    RECT desktop_window_rect;
-    GetWindowRect(desktop_window_handle, &desktop_window_rect);
-        
-    resize(20 * desktop_window_rect.right / 100, 10 * desktop_window_rect.bottom / 100);
+
 
     if(LoadStylesheetFile("./style_sheet.qss")) {
         logToConsole({"style_sheet.qss Loaded"});
