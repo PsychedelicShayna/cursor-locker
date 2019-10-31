@@ -34,10 +34,10 @@ void MainWindow::monitoringWorker() {
                 logToConsole({clip_state_toggle ? "Activated" : "Deactivated", " lock."});
 
                 Sleep(500);
+            } else {
+                ClipCursor(clip_state_toggle ? &clip_cursor_rect : nullptr);
             }
             
-            ClipCursor(clip_state_toggle ? &clip_cursor_rect : nullptr);
-
             Sleep(60);
         } else if(monitoringWorkerMode == MONITOR_FOR::PROCESS_IMAGE) {
             HANDLE running_tasks_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0);
