@@ -21,6 +21,8 @@ namespace Ui {
     class MainWindow;
 }
 
+using Json = nlohmann::json;
+
 enum struct MONITOR_FOR;
 
 class MainWindow : public QMainWindow {

@@ -133,15 +133,27 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
 
         case 1 : {
             monitoringWorkerMode = MONITOR_FOR::KEYBIND;
-            ui->lin_activation_parameter->setText("");
-            ui->lin_activation_parameter->setPlaceholderText("VKID, default: 0x6A (Numpad *)");
+            
+            if(monitoringWorkerVkid.load() != 0) {
+                std::stringstream conversion_stream;
+                conversion_stream << "0x" << std::uppercase << std::hex << monitoringWorkerVkid.load();
+            
+                std::string converted_string;
+                conversion_stream >> converted_string;
+            
+                ui->lin_activation_parameter->setText(QString::fromStdString(converted_string));
+            } else {
+                ui->lin_activation_parameter->setText("");
+            }
+            
+            ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
             logToConsole({"Activation mode set to keybind, VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html"});
             break;
         }
 
         case 2 : {
             monitoringWorkerMode = MONITOR_FOR::PROCESS_IMAGE;
-            ui->lin_activation_parameter->setText("");
+            ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerImage.load()));
             ui->lin_activation_parameter->setPlaceholderText("E.g. TESV.exe, SkyrimSE.exe, etc");
             logToConsole({"Activation mode set to process image."});
             break;
@@ -149,7 +161,7 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
 
         case 3 : {
             monitoringWorkerMode = MONITOR_FOR::WINDOW_TITLE;
-            ui->lin_activation_parameter->setText("");
+            ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerTitle.load()));
             ui->lin_activation_parameter->setPlaceholderText("E.g. Skyrim, Skyrim Special Edition, etc");
             logToConsole({"Activation mode set to window title."});
             break;
@@ -253,7 +265,70 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     std::fill(monitoringWorkerImage.load(), monitoringWorkerImage.load() + 1, 0x00);
     std::fill(monitoringWorkerTitle.load(), monitoringWorkerTitle.load() + 1, 0x00);
-
+    
+    std::ifstream input_stream("./defaults.json", std::ios::binary);
+    
+    if(input_stream.good()) {
+        std::string raw_json_string((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
+        input_stream.close();
+        
+        Json default_values = Json::parse(raw_json_string);
+        
+        logToConsole({"Default values from defaults.json have been parsed."});
+        
+        for(const auto& pair : default_values.items()) {
+            if(pair.key() == "vkid") {
+                std::stringstream conversion_stream;
+                conversion_stream << std::hex << pair.value().get<std::string>();
+                
+                uint32_t converted_value = 0;
+                conversion_stream >> converted_value;
+                
+                monitoringWorkerVkid = converted_value;
+                
+                logToConsole({"Loaded VKID(", QString::fromStdString(pair.value()), ") from defaults.json"});
+            } else if(pair.key() == "image") {
+                const std::string& image = pair.value();
+                
+                char* heap_copy = new char[image.size() + 1];                
+                std::copy(image.data(), image.data() + image.size() + 1, heap_copy);
+                
+                delete monitoringWorkerImage.load();                
+                monitoringWorkerImage.store(heap_copy);                
+                
+                logToConsole({"Loaded image name(", QString::fromStdString(pair.value()), ") from defaults.json"});
+            } else if(pair.key() == "title") {
+                const std::string& title = pair.value();
+                
+                char* heap_copy = new char[title.size() + 1];
+                std::copy(title.data(), title.data() + title.size() + 1, heap_copy);
+                
+                delete monitoringWorkerTitle.load();
+                monitoringWorkerTitle.store(heap_copy);
+                
+                logToConsole({"Loaded window title(", QString::fromStdString(pair.value()),") from defaults.json"});
+            }
+        }
+        
+    } else {
+        std::ofstream output_stream("./defaults.json", std::ios::binary);
+        
+        if(output_stream.good()) {
+            Json json_template = {
+                {"vkid", ""},
+                {"image", ""},
+                {"title", ""}
+            };
+            
+            const std::string& dumped_json = json_template.dump(4);
+            
+            output_stream.write(dumped_json.data(), dumped_json.size());
+            output_stream.close();
+        }
+        
+        logToConsole({"Generated defaults.json. If you wish to store default values, please fill it."});
+    }
+        
     MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
 
     HWND desktop_window_handle = GetDesktopWindow();
