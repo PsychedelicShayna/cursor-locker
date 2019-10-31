@@ -21,11 +21,11 @@ void MainWindow::monitoringWorker() {
 
     for(;;) {
         if(monitoringWorkerMode == MONITOR_FOR::KEYBIND) {
+            static bool clip_state_toggle = 0;
+            
             if((GetAsyncKeyState(monitoringWorkerVkid) & 0x8000) != 0) {
-                static bool clip_state_toggle = 0;
-
                 clip_state_toggle ^= 1;
-
+                
                 ClipCursor(clip_state_toggle ? &clip_cursor_rect : nullptr);
 
                 Beep(clip_state_toggle ? 500 : 700, 20);
@@ -35,8 +35,10 @@ void MainWindow::monitoringWorker() {
 
                 Sleep(500);
             }
+            
+            ClipCursor(clip_state_toggle ? &clip_cursor_rect : nullptr);
 
-            Sleep(50);
+            Sleep(60);
         } else if(monitoringWorkerMode == MONITOR_FOR::PROCESS_IMAGE) {
             HANDLE running_tasks_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0);
 
