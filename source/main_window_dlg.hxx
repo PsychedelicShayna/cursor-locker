@@ -15,6 +15,8 @@
 #include <atomic>
 #include <mutex>
 
+#include "json.hxx"
+
 namespace Ui {
     class MainWindow;
 }
