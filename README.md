@@ -1,7 +1,4 @@
 # Cursor Locker Redux
-
-This is the repository for a program hosted on NexusMods https://www.nexusmods.com/skyrim/mods/95474
-
 Compared to the original Mouselock utility, the redux version has a graphical user interface, as well as bug fixes, and all around cleaner and more efficient programming. You can find pre-compiled binaries in the releases section if you'd rather not compile it yourself. This project uses Qt5 which is cross-platform, however it is currently only compatible with Windows since it relies on WinAPI to function.
 
 

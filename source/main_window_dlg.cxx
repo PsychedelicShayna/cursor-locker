@@ -120,6 +120,13 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
             ui->lin_activation_parameter->setText("");
             ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
             logToConsole({"Activation mode set to nothing."});
+            
+            ClipCursor(NULL);
+            
+            Beep(700, 20);
+            Beep(600, 20);
+            Beep(500, 20);
+            
             break;
         }
 
@@ -329,8 +336,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         
     MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
     
-
-
     if(LoadStylesheetFile("./style_sheet.qss")) {
         logToConsole({"style_sheet.qss Loaded"});
     } else {
