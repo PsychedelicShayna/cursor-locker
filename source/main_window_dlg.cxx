@@ -256,6 +256,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
 
+    HWND desktop_window_handle = GetDesktopWindow();
+    
+    RECT desktop_window_rect;
+    GetWindowRect(desktop_window_handle, &desktop_window_rect);
+        
+    resize(20 * desktop_window_rect.right / 100, 10 * desktop_window_rect.bottom / 100);
+
     if(LoadStylesheetFile("./style_sheet.qss")) {
         logToConsole({"style_sheet.qss Loaded"});
     } else {
