@@ -33,7 +33,7 @@ void MainWindow::monitoringWorker() {
             HANDLE running_tasks_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0);
 
             if(running_tasks_snapshot == INVALID_HANDLE_VALUE) {
-                logToConsole({"Invalid handle value for snapshot of type TH32CS_SNAPPROCESS. Cannot see running tasks."});
+                logToConsole("Invalid handle value for snapshot of type TH32CS_SNAPPROCESS. Cannot see running tasks.");
                 continue;
             } else {
                 PROCESSENTRY32 process_entry_32;
@@ -119,7 +119,7 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
             monitoringWorkerMode = MONITOR_FOR::NOTHING;
             ui->lin_activation_parameter->setText("");
             ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
-            logToConsole({"Activation mode set to nothing."});
+            logToConsole("Activation mode set to nothing.");
             
             ClipCursor(NULL);
             
@@ -146,7 +146,7 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
             }
             
             ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
-            logToConsole({"Activation mode set to keybind, VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html"});
+            logToConsole("Activation mode set to keybind, VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html");
             break;
         }
 
@@ -154,7 +154,7 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
             monitoringWorkerMode = MONITOR_FOR::PROCESS_IMAGE;
             ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerImage.load()));
             ui->lin_activation_parameter->setPlaceholderText("E.g. TESV.exe, SkyrimSE.exe, etc");
-            logToConsole({"Activation mode set to process image."});
+            logToConsole("Activation mode set to process image.");
             break;
         }
 
@@ -162,7 +162,7 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
             monitoringWorkerMode = MONITOR_FOR::WINDOW_TITLE;
             ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerTitle.load()));
             ui->lin_activation_parameter->setPlaceholderText("E.g. Skyrim, Skyrim Special Edition, etc");
-            logToConsole({"Activation mode set to window title."});
+            logToConsole("Activation mode set to window title.");
             break;
         }
     }
@@ -228,6 +228,13 @@ void MainWindow::logToConsole(const QList<QString>& message_list) {
     ui->txt_console->insertPlainText(concatenated_messages);
 }
 
+void MainWindow::logToConsole(const char* message) {
+    std::lock_guard<std::mutex> console_mutex_guard(consoleMutex);
+    
+    ui->txt_console->moveCursor(QTextCursor::End);
+    ui->txt_console->insertPlainText(QString(message) + '\n');
+}
+
 void MainWindow::closeEvent(QCloseEvent*) {
     ClipCursor(nullptr);
 }
@@ -279,7 +286,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         
         Json default_values = Json::parse(raw_json_string);
         
-        logToConsole({"Default values from defaults.json have been parsed."});
+        logToConsole("Default values from defaults.json have been parsed.");
         
         for(const auto& pair : default_values.items()) {
             if(pair.key() == "vkid") {
@@ -314,7 +321,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
                 logToConsole({"Loaded window title(", QString::fromStdString(pair.value()),") from defaults.json"});
             }
         }
-        
     } else {
         std::ofstream output_stream("./defaults.json", std::ios::binary);
         
@@ -331,15 +337,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             output_stream.close();
         }
         
-        logToConsole({"Generated defaults.json. If you wish to store default values, please fill it."});
+        logToConsole("Generated defaults.json. If you wish to store default values, please fill it.");
     }
         
     MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
     
     if(LoadStylesheetFile("./style_sheet.qss")) {
-        logToConsole({"style_sheet.qss Loaded"});
+        logToConsole("style_sheet.qss Loaded");
     } else {
-        logToConsole({"Cannot open style_sheet.qss, using default style."});
+        logToConsole("Cannot open style_sheet.qss, using default style.");
     }
 }
 

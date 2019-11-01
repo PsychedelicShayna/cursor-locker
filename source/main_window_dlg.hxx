@@ -49,6 +49,7 @@ private:
 
     std::mutex consoleMutex; // Multiple threads may log to the console, therefore a mutex is used to avoid data races.
     void logToConsole(const QList<QString>&);
+    void logToConsole(const char*);
 
     void closeEvent(QCloseEvent*);
 
