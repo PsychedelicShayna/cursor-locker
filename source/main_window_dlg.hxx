@@ -30,8 +30,6 @@ private:
     Ui::MainWindow* ui;
     Q_OBJECT
 
-    RECT desktopWindowRect;
-
     // Determines what the mopnitoringWorker should monitor for in order to activate the locker.
     std::atomic<MONITOR_FOR> monitoringWorkerMode;
 
