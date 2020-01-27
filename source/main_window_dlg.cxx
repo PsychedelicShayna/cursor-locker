@@ -139,7 +139,10 @@ void MainWindow::acquireWindowWorker() {
             }
 
             if(new_foreground_window != old_foreground_window) {
-                Beep(900, 20);
+                Beep(900, 20); Beep(900, 20);
+
+                Sleep(3);
+
                 std::array<char, 256> new_window_title_buffer;
                 std::fill(new_window_title_buffer.begin(), new_window_title_buffer.end(), 0x00);
 
@@ -265,7 +268,9 @@ void MainWindow::on_btn_edit_activation_parameter_clicked() {
 }
 
 void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
-    acquireWindowThreadSignal.store(true);
+    if(monitoringWorkerMode == MONITOR_FOR::WINDOW_TITLE) {
+        acquireWindowThreadSignal.store(true);
+    }
 }
 
 void MainWindow::logToConsole(const QList<QString>& message_list) {
