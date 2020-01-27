@@ -4,6 +4,7 @@
 #undef UNICODE
 
 #include <QMainWindow>
+#include <QMessageBox>
 
 #include <Windows.h>
 #include <TlHelp32.h>
@@ -15,6 +16,7 @@
 #include <atomic>
 #include <mutex>
 
+#include "rightclick_adapter.hxx"
 #include "json.hxx"
 
 namespace Ui {
@@ -45,6 +47,10 @@ private:
     // The target of MonitoringThread. Monitors for conditions, and activates/deactivates the locking mechanism accordingly.
     [[noreturn]] void monitoringWorker();
 
+    // The target of AcquireWindowThread. Monitors foreground window changes, activated by right clicking the edit activation parameter button.
+    std::atomic<bool> acquireWindowThreadSignal;
+    [[noreturn]] void acquireWindowWorker();
+
     std::mutex consoleMutex; // Multiple threads may log to the console, therefore a mutex is used to avoid data races.
     void logToConsole(const QList<QString>&);
     void logToConsole(const char*);
@@ -54,10 +60,14 @@ private:
 private slots:
     void on_cbx_activation_method_currentIndexChanged(int);
     void on_btn_edit_activation_parameter_clicked();
+    void on_btn_edit_activation_parameter_right_clicked();
 
 public:
-    // Thread that runs monitoringWorker
+    // Thread that runs monitoringWorker.
     std::thread MonitoringThread;
+
+    // Thread that runs acquireWindowWorker.
+    std::thread AcquireWindowThread;
 
     bool LoadStylesheetFile(const std::string&);
 

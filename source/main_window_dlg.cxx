@@ -118,6 +118,47 @@ void MainWindow::monitoringWorker() {
     }
 }
 
+void MainWindow::acquireWindowWorker() {
+    for(;;Sleep(1000)) {
+        if(acquireWindowThreadSignal.load() == true) {
+            acquireWindowThreadSignal.store(false);
+
+            HWND old_foreground_window = GetForegroundWindow();
+            HWND new_foreground_window = old_foreground_window;
+
+            for(uint32_t tries = 0; (new_foreground_window == old_foreground_window) && tries < 10; ++tries) {
+                std::stringstream placeholder_stream;
+                placeholder_stream << "Click on the target window to capture its title (" << tries << " / 10)";
+
+                ui->lin_activation_parameter->clear();
+                ui->lin_activation_parameter->setPlaceholderText(QString::fromStdString(placeholder_stream.str()));
+
+                new_foreground_window = GetForegroundWindow();
+                Beep(200, 20);
+                Sleep(500);
+            }
+
+            if(new_foreground_window != old_foreground_window) {
+                Beep(900, 20);
+                std::array<char, 256> new_window_title_buffer;
+                std::fill(new_window_title_buffer.begin(), new_window_title_buffer.end(), 0x00);
+
+                GetWindowText(new_foreground_window, new_window_title_buffer.data(), new_window_title_buffer.size()-1);
+                std::string new_window_title(new_window_title_buffer.data());
+
+                delete monitoringWorkerTitle.load();
+                monitoringWorkerTitle = new char[new_window_title.size() + 1];
+                memset(monitoringWorkerTitle.load(), 0x00, new_window_title.size() + 1);
+                std::copy(new_window_title.begin(), new_window_title.end(), monitoringWorkerTitle.load());
+
+                ui->lin_activation_parameter->setText(QString::fromStdString(new_window_title));
+            }
+
+            ui->lin_activation_parameter->setPlaceholderText("E.g. Skyrim, Skyrim Special Edition, etc");
+        }
+    }
+}
+
 void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
     switch(index) {
         case 0 : {
@@ -167,7 +208,7 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
             monitoringWorkerMode = MONITOR_FOR::WINDOW_TITLE;
             ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerTitle.load()));
             ui->lin_activation_parameter->setPlaceholderText("E.g. Skyrim, Skyrim Special Edition, etc");
-            logToConsole("Activation mode set to window title.");
+            logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window automatically.");
             break;
         }
     }
@@ -212,11 +253,19 @@ void MainWindow::on_btn_edit_activation_parameter_clicked() {
                 std::copy(window_title_string.data(), window_title_string.data() + window_title_string.size() + 1, monitoringWorkerTitle.load());
                 break;
             }
+
+            case MONITOR_FOR::NOTHING : {
+                break;
+            }
         }
 
         ui->lin_activation_parameter->setEnabled(false);
         ui->btn_edit_activation_parameter->setText("Edit");
     }
+}
+
+void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
+    acquireWindowThreadSignal.store(true);
 }
 
 void MainWindow::logToConsole(const QList<QString>& message_list) {
@@ -260,6 +309,26 @@ bool MainWindow::LoadStylesheetFile(const std::string& file_path) {
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
+    static struct RightClickEventFilter : public QObject {
+        MainWindow* mainWindowParent;
+
+        RightClickEventFilter(MainWindow* main_window_parent) : mainWindowParent(main_window_parent) {}
+
+        inline bool eventFilter(QObject* watched, QEvent* event) override {
+            if(event->type() == QEvent::MouseButtonPress)    {
+                QMouseEvent* mouse_event = reinterpret_cast<QMouseEvent*>(event);
+
+                if(mouse_event->button() == Qt::RightButton) {
+                    mainWindowParent->on_btn_edit_activation_parameter_right_clicked();
+                }
+            }
+
+            return false;
+        }
+    } right_click_event_filter(this);
+
+    ui->btn_edit_activation_parameter->installEventFilter(&right_click_event_filter);
+
     setWindowFlags(
         Qt::Dialog |
         Qt::CustomizeWindowHint |
@@ -281,6 +350,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     monitoringWorkerVkid    = 0x00;
     monitoringWorkerImage   = new char[2];
     monitoringWorkerTitle   = new char[2];
+    acquireWindowThreadSignal = false;
 
     std::fill(monitoringWorkerImage.load(), monitoringWorkerImage.load() + 1, 0x00);
     std::fill(monitoringWorkerTitle.load(), monitoringWorkerTitle.load() + 1, 0x00);
@@ -348,6 +418,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     }
         
     MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
+    AcquireWindowThread = std::thread([this]() -> void { acquireWindowWorker(); });
     
     if(LoadStylesheetFile("./style_sheet.qss")) {
         logToConsole("style_sheet.qss Loaded");
