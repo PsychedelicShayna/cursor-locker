@@ -16,7 +16,6 @@
 #include <atomic>
 #include <mutex>
 
-#include "rightclick_adapter.hxx"
 #include "json.hxx"
 
 namespace Ui {
