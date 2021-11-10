@@ -1,6 +1,6 @@
 QT += core gui widgets
 
-TARGET = CursorLocker
+TARGET = cursor-locker
 TEMPLATE = app
 
 DEFINES += QT_DEPRECATED_WARNINGS
@@ -11,15 +11,15 @@ CONFIG(debug, debug|release): DEFINES += DEBUG
 CONFIG(release, debug|release): DEFINES += RELEASE
 
 SOURCES += \
-    main.cxx \
-    main_window_dlg.cxx
+    source\main.cxx \
+    source\main_wnd.cxx
 
 HEADERS += \
-    main_window_dlg.hxx \
-    json.hxx
+    source\main_wnd.hxx \
+    source\json.hxx
 
 FORMS += \
-    main_window_dlg.ui
+    source\main_wnd.ui
 
 LIBS += \
     -lUser32

@@ -1,7 +1,11 @@
 /*
+
 !source/
+
 !.gitignore
 !LICENSE
 !README.md
 !screenshots
+
+!*.pro
 *.user
