@@ -114,6 +114,8 @@ void MainWindow::monitoringWorker() {
             }
 
             Sleep(1000);
+        } else {
+            Sleep(1000);
         }
     }
 }
