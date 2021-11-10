@@ -1,5 +1,5 @@
-#include "main_window_dlg.hxx"
-#include "ui_main_window_dlg.h"
+#include "main_wnd.hxx"
+#include "ui_main_wnd.h"
 
 enum struct MONITOR_FOR {
     NOTHING         =   0b00000000,
@@ -300,6 +300,7 @@ void MainWindow::closeEvent(QCloseEvent*) {
 
 bool MainWindow::LoadStylesheetFile(const std::string& file_path) {
     std::ifstream input_stream(file_path, std::ios::binary);
+
     if(input_stream.good()) {
         std::string style_sheet((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
         input_stream.close();
@@ -370,6 +371,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         
         logToConsole("Default values from defaults.json have been parsed.");
         
+        uint8_t default_cbx_activation_method_index = 0;
+
         for(const auto& pair : default_values.items()) {
             if(pair.key() == "vkid") {
                 std::stringstream conversion_stream;
@@ -401,8 +404,20 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
                 monitoringWorkerTitle.store(heap_copy);
                 
                 logToConsole({"Loaded window title(", QString::fromStdString(pair.value()),") from defaults.json"});
+            } else if(pair.key() == "method") {
+                if(pair.value() == "vkid") {
+                    default_cbx_activation_method_index = 1;
+                } else if(pair.value() == "image") {
+                    default_cbx_activation_method_index = 2;
+                } else if(pair.value() == "title") {
+                    default_cbx_activation_method_index = 3;
+                }
+
+                logToConsole({"Loaded activation method(", QString::fromStdString(pair.value()),") from defaults.json"});
             }
         }
+
+        ui->cbx_activation_method->setCurrentIndex(default_cbx_activation_method_index);
     } else {
         std::ofstream output_stream("./defaults.json", std::ios::binary);
         
@@ -410,7 +425,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             Json json_template = {
                 {"vkid", ""},
                 {"image", ""},
-                {"title", ""}
+                {"title", ""},
+                {"method", ""}
             };
             
             const std::string& dumped_json = json_template.dump(4);
