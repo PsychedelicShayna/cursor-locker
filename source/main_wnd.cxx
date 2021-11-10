@@ -23,8 +23,10 @@ void MainWindow::monitoringWorker() {
                 
                 ClipCursor(clip_state_toggle ? &cursor_cage_rect : nullptr);
 
-                Beep(clip_state_toggle ? 500 : 700, 20);
-                Beep(clip_state_toggle ? 700 : 500, 20);
+                if(!muteBeepBoop) {
+                    Beep(clip_state_toggle ? 500 : 700, 20);
+                    Beep(clip_state_toggle ? 700 : 500, 20);
+                }
 
                 logToConsole({clip_state_toggle ? "Activated" : "Deactivated", " lock."});
 
@@ -62,8 +64,10 @@ void MainWindow::monitoringWorker() {
                             logToConsole({"Found target process: ", QString(monitoringWorkerImage)});
                             first_find = false;
 
-                            Beep(500, 20);
-                            Beep(700, 20);
+                            if(!muteBeepBoop) {
+                                Beep(500, 20);
+                                Beep(700, 20);
+                            }
                         }
                     } else {
                         ClipCursor(nullptr);
@@ -72,8 +76,10 @@ void MainWindow::monitoringWorker() {
                             logToConsole({"Lost target process: ", QString(monitoringWorkerImage)});
                             first_find = true;
 
-                            Beep(700, 20);
-                            Beep(500, 20);
+                            if(!muteBeepBoop) {
+                                Beep(700, 20);
+                                Beep(500, 20);
+                            }
                         }
                     }
                 }
@@ -98,8 +104,10 @@ void MainWindow::monitoringWorker() {
                     logToConsole({"Found target window: ", QString(monitoringWorkerTitle)});
                     first_find = false;
 
-                    Beep(500, 20);
-                    Beep(700, 20);
+                    if(!muteBeepBoop) {
+                        Beep(500, 20);
+                        Beep(700, 20);
+                    }
                 }
             } else {
                     ClipCursor(nullptr);
@@ -108,8 +116,10 @@ void MainWindow::monitoringWorker() {
                         logToConsole({"Lost target window: ", QString(monitoringWorkerTitle)});
                         first_find = true;
 
-                        Beep(700, 20);
-                        Beep(500, 20);
+                        if(!muteBeepBoop) {
+                            Beep(700, 20);
+                            Beep(500, 20);
+                        }
                     }
             }
 
@@ -136,14 +146,20 @@ void MainWindow::acquireWindowWorker() {
                 ui->lin_activation_parameter->setPlaceholderText(QString::fromStdString(placeholder_stream.str()));
 
                 new_foreground_window = GetForegroundWindow();
-                Beep(200, 20);
+
+                if(!muteBeepBoop) {
+                    Beep(200, 20);
+                }
+
                 Sleep(500);
             }
 
             if(new_foreground_window != old_foreground_window) {
-                Beep(900, 20); Beep(900, 20);
-
-                Sleep(3);
+                if(!muteBeepBoop) {
+                    Beep(900, 20);
+                    Beep(900, 20);
+                    Sleep(3);
+                }
 
                 std::array<char, 256> new_window_title_buffer;
                 std::fill(new_window_title_buffer.begin(), new_window_title_buffer.end(), 0x00);
@@ -174,9 +190,11 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
             
             ClipCursor(NULL);
             
-            Beep(700, 20);
-            Beep(600, 20);
-            Beep(500, 20);
+            if(!muteBeepBoop) {
+                Beep(700, 20);
+                Beep(600, 20);
+                Beep(500, 20);
+            }
             
             break;
         }
@@ -275,6 +293,16 @@ void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
     }
 }
 
+void MainWindow::on_btn_mutebeepboop_clicked() {
+    if(muteBeepBoop.load()) {
+        muteBeepBoop = false;
+        ui->btn_mutebeepboop->setText("Mute");
+    } else {
+        muteBeepBoop = true;
+        ui->btn_mutebeepboop->setText("Unmute");
+    }
+}
+
 void MainWindow::logToConsole(const QList<QString>& message_list) {
     std::lock_guard<std::mutex> console_mutex_guard(consoleMutex);
     QString concatenated_messages;
@@ -354,11 +382,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     
     resize(20 * desktop_window_rect.right / 100, 10 * desktop_window_rect.bottom / 100);
 
-    monitoringWorkerMode    = MONITOR_FOR::NOTHING;
-    monitoringWorkerVkid    = 0x00;
-    monitoringWorkerImage   = new char[2];
-    monitoringWorkerTitle   = new char[2];
+    monitoringWorkerMode      = MONITOR_FOR::NOTHING;
+    monitoringWorkerVkid      = 0x00;
+    monitoringWorkerImage     = new char[2];
+    monitoringWorkerTitle     = new char[2];
     acquireWindowThreadSignal = false;
+    muteBeepBoop              = false;
 
     std::fill(monitoringWorkerImage.load(), monitoringWorkerImage.load() + 1, 0x00);
     std::fill(monitoringWorkerTitle.load(), monitoringWorkerTitle.load() + 1, 0x00);
