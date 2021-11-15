@@ -41,18 +41,18 @@ private:
     RECT getForegroundWindowRect();
     void enableCursorLock();
     void disableCursorLock();
-    void toggleCursorLock();
+    bool toggleCursorLock();
 
     uint8_t targetHotkeyVkid;
     bool registerTargetHotkey();
     bool unregisterTargetHotkey();
-
-
-    QString targetForegroundWindowTitle;
-    void activateIfForegroundWindowMatchesTarget();
+    void targetHotkeyVkidPressedSlot();
 
     QString targetProcessImageName;
     void activateIfTargetImagePresent();
+
+    QString targetForegroundWindowTitle;
+    void activateIfForegroundWindowMatchesTarget();
 
     // Points to the member function that the timeout() signal from the below timer is connected to.
     void(MainWindow::*selectedActivationMethodFunction)();
@@ -75,7 +75,7 @@ private:
     bool nativeEvent(const QByteArray& event_type, void* message, long* result);
 
 signals:
-    void TargetHotkeyVkidPressedSignal();
+    void targetHotkeyVkidPressedSignal();
 
 private slots:
     void on_cbx_activation_method_currentIndexChanged(int);

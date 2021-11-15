@@ -35,7 +35,7 @@ void MainWindow::disableCursorLock() {
     ClipCursor(nullptr);
 }
 
-void MainWindow::toggleCursorLock() {
+bool MainWindow::toggleCursorLock() {
     static bool toggle = false;
 
     if(toggle ^= true) {
@@ -43,6 +43,8 @@ void MainWindow::toggleCursorLock() {
     } else {
         disableCursorLock();
     }
+
+    return toggle;
 }
 
 bool MainWindow::registerTargetHotkey() {
@@ -53,38 +55,117 @@ bool MainWindow::unregisterTargetHotkey() {
     return UnregisterHotKey(HWND(winId()), targetHotkeyVkid);
 }
 
+void MainWindow::targetHotkeyVkidPressedSlot() {
+    if(toggleCursorLock()) {
+        logToConsole("Activated cursor lock via hotkey.");
+        BeepBoop({{500,20}, {700, 20}});
+    } else {
+        logToConsole("Deactivated cursor lock via hotkey.");
+        BeepBoop({{700,20}, {500, 20}});
+    }
+}
+
 void MainWindow::activateIfTargetImagePresent() {
+    HANDLE process_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0);
+
+    if(process_snapshot == INVALID_HANDLE_VALUE) {
+        logToConsole("Invalid handle value for snapshot of type TH32CS_SNAPPROCESS. Cannot see running tasks.");
+        return;
+    }
+
+    PROCESSENTRY32 process_entry_32;
+    process_entry_32.dwSize = sizeof(PROCESSENTRY32);
+
+    if(Process32First(process_snapshot, &process_entry_32)) {
+        static bool first_find = true;
+        bool process_found = false;
+
+        do {
+            if(targetProcessImageName == process_entry_32.szExeFile) {
+                process_found = true;
+                break;
+            }
+        } while(Process32Next(process_snapshot, &process_entry_32));
+
+        if(process_found) {
+            enableCursorLock();
+
+            if(first_find) {
+                logToConsole({"Found target process: ", targetProcessImageName});
+                first_find = false;
+
+                BeepBoop({{500,20}, {700,20}});
+            }
+        } else {
+            disableCursorLock();
+
+            if(!first_find) {
+                logToConsole({"Lost target process: ", targetProcessImageName});
+                first_find = true;
+
+                BeepBoop({{700,20}, {500,20}});
+            }
+        }
+    }
+
+    CloseHandle(process_snapshot);
 }
 
 void MainWindow::activateIfForegroundWindowMatchesTarget() {
-}
+    static bool first_find = true;
 
+    char window_title_buffer[256];
+    std::fill(window_title_buffer, window_title_buffer + sizeof(window_title_buffer), 0x00);
+
+    HWND foreground_window = GetForegroundWindow();
+    GetWindowTextA(foreground_window, window_title_buffer, sizeof(window_title_buffer));
+
+    if(targetForegroundWindowTitle == window_title_buffer) {
+        enableCursorLock();
+
+        if(first_find) {
+            logToConsole({"Found target window: ", targetForegroundWindowTitle});
+            first_find = false;
+
+            BeepBoop({{500,20}, {700,20}});
+        }
+    } else {
+        disableCursorLock();
+
+        if(!first_find) {
+            logToConsole({"Lost target window: ", targetForegroundWindowTitle});
+            first_find = true;
+
+            BeepBoop({{700,20}, {500,20}});
+        }
+    }
+}
 
 void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
     if(unregisterTargetHotkey() != 0) {
-        disconnect(this, &MainWindow::TargetHotkeyVkidPressedSignal, this, &MainWindow::toggleCursorLock);
+        disconnect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
     }
 
     if(selectedActivationMethodFunction != nullptr) {
         disconnect(checkActivationMethodTimer, &QTimer::timeout, this, selectedActivationMethodFunction);
         selectedActivationMethodFunction = nullptr;
+        checkActivationMethodTimer->stop();
     }
 
     ui->lin_activation_parameter->clear();
-
     disableCursorLock();
 
     switch(index) {
         case 0 : {
             selectedActivationCondition = MONITOR_FOR::NOTHING;
-            checkActivationMethodTimer->stop();
-            BeepBoop({{700,20}, {600,20}, {500,20}});
+            ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
+            // BeepBoop({{700,20}, {600,20}, {500,20}});
             break;
         }
 
         case 1 : {
             selectedActivationCondition = MONITOR_FOR::KEYBIND;
-            connect(this, &MainWindow::TargetHotkeyVkidPressedSignal, this, &MainWindow::toggleCursorLock);
+            connect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
             registerTargetHotkey();
 
             ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
@@ -172,20 +253,12 @@ void MainWindow::on_btn_edit_activation_parameter_clicked() {
             }
 
             case MONITOR_FOR::PROCESS_IMAGE : {
-                // delete monitoringWorkerImage;
-                //
-                // const std::string& process_image_string = ui->lin_activation_parameter->text().toStdString();
-                // monitoringWorkerImage = new char[process_image_string.size() + 1];
-                // std::copy(process_image_string.data(), process_image_string.data() + process_image_string.size() + 1, monitoringWorkerImage.load());
+                targetProcessImageName = ui->lin_activation_parameter->text();
                 break;
             }
 
             case MONITOR_FOR::WINDOW_TITLE : {
-                // delete monitoringWorkerTitle;
-                //
-                // const std::string& window_title_string = ui->lin_activation_parameter->text().toStdString();
-                // monitoringWorkerTitle = new char[window_title_string.size() + 1];
-                // std::copy(window_title_string.data(), window_title_string.data() + window_title_string.size() + 1, monitoringWorkerTitle.load());
+                targetForegroundWindowTitle = ui->lin_activation_parameter->text();
                 break;
             }
 
@@ -547,8 +620,8 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* 
 
     MSG* msg = reinterpret_cast<MSG*>(message);
 
-    if (msg->message == WM_HOTKEY ) {// && msg->lParam == targetHotkeyVkid) {
-        emit TargetHotkeyVkidPressedSignal();
+    if (msg->message == WM_HOTKEY && msg->wParam == static_cast<uint64_t>(targetHotkeyVkid)) {
+        emit targetHotkeyVkidPressedSignal();
         return true;
     }
 
