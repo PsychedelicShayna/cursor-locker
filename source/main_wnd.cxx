@@ -8,6 +8,340 @@ enum struct MONITOR_FOR {
     WINDOW_TITLE    =   0b00000100,
 };
 
+void MainWindow::BeepBoop(QList<QPair<int, int>> freqdur_list) {
+    if(!muteBeepBoop) {
+        for(QPair<int,int>& pair : freqdur_list) {
+            Beep(pair.first, pair.second);
+        }
+    }
+}
+
+RECT MainWindow::getForegroundWindowRect() {
+    HWND foreground_window_handle = GetForegroundWindow();
+    RECT foreground_window_rect;
+
+    GetWindowRect(foreground_window_handle, &foreground_window_rect);
+
+    return foreground_window_rect;
+}
+
+
+void MainWindow::enableCursorLock() {
+    RECT foreground_window_rect = getForegroundWindowRect();
+    ClipCursor(&foreground_window_rect);
+}
+
+void MainWindow::disableCursorLock() {
+    ClipCursor(nullptr);
+}
+
+void MainWindow::toggleCursorLock() {
+    static bool toggle = false;
+
+    if(toggle ^= true) {
+        enableCursorLock();
+    } else {
+        disableCursorLock();
+    }
+}
+
+bool MainWindow::registerTargetHotkey() {
+    return RegisterHotKey(HWND(winId()), targetHotkeyVkid, MOD_NOREPEAT, targetHotkeyVkid);
+}
+
+bool MainWindow::unregisterTargetHotkey() {
+    return UnregisterHotKey(HWND(winId()), targetHotkeyVkid);
+}
+
+void MainWindow::activateIfTargetImagePresent() {
+}
+
+void MainWindow::activateIfForegroundWindowMatchesTarget() {
+}
+
+
+void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
+    if(unregisterTargetHotkey() != 0) {
+        disconnect(this, &MainWindow::TargetHotkeyVkidPressedSignal, this, &MainWindow::toggleCursorLock);
+    }
+
+    if(selectedActivationMethodFunction != nullptr) {
+        disconnect(checkActivationMethodTimer, &QTimer::timeout, this, selectedActivationMethodFunction);
+        selectedActivationMethodFunction = nullptr;
+    }
+
+    ui->lin_activation_parameter->clear();
+
+    disableCursorLock();
+
+    switch(index) {
+        case 0 : {
+            selectedActivationCondition = MONITOR_FOR::NOTHING;
+            checkActivationMethodTimer->stop();
+            BeepBoop({{700,20}, {600,20}, {500,20}});
+            break;
+        }
+
+        case 1 : {
+            selectedActivationCondition = MONITOR_FOR::KEYBIND;
+            connect(this, &MainWindow::TargetHotkeyVkidPressedSignal, this, &MainWindow::toggleCursorLock);
+            registerTargetHotkey();
+
+            ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
+
+            if(targetHotkeyVkid != 0) {
+                char hex_vkid[5];
+                std::fill(hex_vkid, hex_vkid + sizeof(hex_vkid), 0x00);
+                sprintf(hex_vkid, "0x%02X", targetHotkeyVkid);
+                ui->lin_activation_parameter->setText(QString(hex_vkid));
+            }
+
+            logToConsole("Activation mode set to keybind, VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html");
+
+            break;
+        }
+
+        case 2 : {
+            selectedActivationCondition = MONITOR_FOR::PROCESS_IMAGE;
+            selectedActivationMethodFunction = &MainWindow::activateIfTargetImagePresent;
+            ui->lin_activation_parameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
+
+            if(targetProcessImageName.size()) {
+                ui->lin_activation_parameter->setText(QString(targetProcessImageName));
+            }
+
+            logToConsole("Activation mode set to process image.");
+
+            break;
+        }
+
+        case 3 : {
+            selectedActivationCondition = MONITOR_FOR::WINDOW_TITLE;
+            selectedActivationMethodFunction = &MainWindow::activateIfForegroundWindowMatchesTarget;
+            ui->lin_activation_parameter->setPlaceholderText("Window title, e.g. Skyrim, Skyrim Special Edition");
+
+            if(targetForegroundWindowTitle.size()) {
+                ui->lin_activation_parameter->setText(QString(targetForegroundWindowTitle));
+            }
+
+            logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.");
+
+            break;
+        }
+    }
+
+    if(selectedActivationMethodFunction != nullptr) {
+        connect(checkActivationMethodTimer, &QTimer::timeout, this, selectedActivationMethodFunction);
+        checkActivationMethodTimer->start(500);
+    }
+}
+
+void MainWindow::on_btn_edit_activation_parameter_clicked() {
+    if(ui->btn_edit_activation_parameter->text() == "Edit" && selectedActivationCondition != MONITOR_FOR::NOTHING) {
+        ui->lin_activation_parameter->setEnabled(true);
+        ui->btn_edit_activation_parameter->setText("Confirm");
+    } else if(ui->btn_edit_activation_parameter->text() == "Confirm") {
+        switch(selectedActivationCondition) {
+            case MONITOR_FOR::KEYBIND : {
+                try {
+                    unregisterTargetHotkey();
+
+                    QString vkid_str = ui->lin_activation_parameter->text();
+
+                    if(vkid_str.size()) {
+                        uint8_t vkid = static_cast<uint8_t>(strtol(vkid_str.toStdString().c_str(), nullptr, 16));
+
+                        if(vkid != 0) {
+                            char hex_vkid[5];
+                            std::fill(hex_vkid, hex_vkid + sizeof(hex_vkid), 0x00);
+                            sprintf(hex_vkid, "0x%02X", vkid);
+                            ui->lin_activation_parameter->setText(hex_vkid);
+
+                            targetHotkeyVkid = vkid;
+                            registerTargetHotkey();
+                        } else {
+                            logToConsole({"Invalid hexadecimal value '", vkid_str, "'"});
+                            ui->lin_activation_parameter->clear();
+                        }
+                    }
+                } catch (const std::exception& exception) {
+                    logToConsole({"Exception when trying to convert hexadecimal VKID text to an integer: ", exception.what()});
+                }
+
+                break;
+            }
+
+            case MONITOR_FOR::PROCESS_IMAGE : {
+                // delete monitoringWorkerImage;
+                //
+                // const std::string& process_image_string = ui->lin_activation_parameter->text().toStdString();
+                // monitoringWorkerImage = new char[process_image_string.size() + 1];
+                // std::copy(process_image_string.data(), process_image_string.data() + process_image_string.size() + 1, monitoringWorkerImage.load());
+                break;
+            }
+
+            case MONITOR_FOR::WINDOW_TITLE : {
+                // delete monitoringWorkerTitle;
+                //
+                // const std::string& window_title_string = ui->lin_activation_parameter->text().toStdString();
+                // monitoringWorkerTitle = new char[window_title_string.size() + 1];
+                // std::copy(window_title_string.data(), window_title_string.data() + window_title_string.size() + 1, monitoringWorkerTitle.load());
+                break;
+            }
+
+            case MONITOR_FOR::NOTHING : {
+                break;
+            }
+        }
+
+        ui->lin_activation_parameter->setEnabled(false);
+        ui->btn_edit_activation_parameter->setText("Edit");
+    }
+}
+
+void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
+
+}
+
+void MainWindow::on_btn_mutebeepboop_clicked() {
+    if(muteBeepBoop) {
+        muteBeepBoop = false;
+        ui->btn_mutebeepboop->setText("Mute");
+    } else {
+        muteBeepBoop = true;
+        ui->btn_mutebeepboop->setText("Unmute");
+    }
+}
+
+/*
+
+void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
+    switch(index) {
+        case 0 : {
+            monitoringWorkerMode = MONITOR_FOR::NOTHING;
+            ui->lin_activation_parameter->setText("");
+            ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
+            logToConsole("Activation mode set to nothing.");
+
+            ClipCursor(NULL);
+
+            if(!muteBeepBoop) {
+                Beep(700, 20);
+                Beep(600, 20);
+                Beep(500, 20);
+            }
+
+            break;
+        }
+
+        case 1 : {
+            monitoringWorkerMode = MONITOR_FOR::KEYBIND;
+
+            if(monitoringWorkerVkid.load() != 0) {
+                std::stringstream conversion_stream;
+                conversion_stream << "0x" << std::uppercase << std::hex << monitoringWorkerVkid.load();
+
+                std::string converted_string;
+                conversion_stream >> converted_string;
+
+                ui->lin_activation_parameter->setText(QString::fromStdString(converted_string));
+            } else {
+                ui->lin_activation_parameter->setText("");
+            }
+
+            ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
+            logToConsole("Activation mode set to keybind, VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html");
+            break;
+        }
+
+        case 2 : {
+            monitoringWorkerMode = MONITOR_FOR::PROCESS_IMAGE;
+            ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerImage.load()));
+            ui->lin_activation_parameter->setPlaceholderText("E.g. TESV.exe, SkyrimSE.exe, etc");
+            logToConsole("Activation mode set to process image.");
+            break;
+        }
+
+        case 3 : {
+            monitoringWorkerMode = MONITOR_FOR::WINDOW_TITLE;
+            ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerTitle.load()));
+            ui->lin_activation_parameter->setPlaceholderText("E.g. Skyrim, Skyrim Special Edition, etc");
+            logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window automatically.");
+            break;
+        }
+    }
+}
+
+void MainWindow::on_btn_edit_activation_parameter_clicked() {
+    if(ui->btn_edit_activation_parameter->text() == "Edit" && monitoringWorkerMode != MONITOR_FOR::NOTHING) {
+        ui->lin_activation_parameter->setEnabled(true);
+        ui->btn_edit_activation_parameter->setText("Confirm");
+    } else if(ui->btn_edit_activation_parameter->text() == "Confirm") {
+        switch(monitoringWorkerMode) {
+            case MONITOR_FOR::KEYBIND : {
+                try {
+                    std::stringstream conversion_stream;
+                    conversion_stream << std::hex << ui->lin_activation_parameter->text().toStdString();
+
+                    uint32_t converted_vkid;
+                    conversion_stream >> converted_vkid;
+
+                    monitoringWorkerVkid = converted_vkid;
+                } catch (const std::exception& exception) {
+                    logToConsole({"Exception when trying to convert hexadecimal VKID text to an integer: ", exception.what()});
+                }
+
+                break;
+            }
+
+            case MONITOR_FOR::PROCESS_IMAGE : {
+                delete monitoringWorkerImage;
+
+                const std::string& process_image_string = ui->lin_activation_parameter->text().toStdString();
+                monitoringWorkerImage = new char[process_image_string.size() + 1];
+                std::copy(process_image_string.data(), process_image_string.data() + process_image_string.size() + 1, monitoringWorkerImage.load());
+                break;
+            }
+
+            case MONITOR_FOR::WINDOW_TITLE : {
+                delete monitoringWorkerTitle;
+
+                const std::string& window_title_string = ui->lin_activation_parameter->text().toStdString();
+                monitoringWorkerTitle = new char[window_title_string.size() + 1];
+                std::copy(window_title_string.data(), window_title_string.data() + window_title_string.size() + 1, monitoringWorkerTitle.load());
+                break;
+            }
+
+            case MONITOR_FOR::NOTHING : {
+                break;
+            }
+        }
+
+        ui->lin_activation_parameter->setEnabled(false);
+        ui->btn_edit_activation_parameter->setText("Edit");
+    }
+}
+
+void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
+    if(monitoringWorkerMode == MONITOR_FOR::WINDOW_TITLE) {
+        acquireWindowThreadSignal.store(true);
+    }
+}
+
+void MainWindow::on_btn_mutebeepboop_clicked() {
+    if(muteBeepBoop.load()) {
+        muteBeepBoop = false;
+        ui->btn_mutebeepboop->setText("Mute");
+    } else {
+        muteBeepBoop = true;
+        ui->btn_mutebeepboop->setText("Unmute");
+    }
+}
+
+*/
+
+
+/*
 void MainWindow::monitoringWorker() {
     for(;;) {
         HWND foreground_window_handle = GetForegroundWindow();
@@ -179,132 +513,10 @@ void MainWindow::acquireWindowWorker() {
         }
     }
 }
-
-void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
-    switch(index) {
-        case 0 : {
-            monitoringWorkerMode = MONITOR_FOR::NOTHING;
-            ui->lin_activation_parameter->setText("");
-            ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
-            logToConsole("Activation mode set to nothing.");
-            
-            ClipCursor(NULL);
-            
-            if(!muteBeepBoop) {
-                Beep(700, 20);
-                Beep(600, 20);
-                Beep(500, 20);
-            }
-            
-            break;
-        }
-
-        case 1 : {
-            monitoringWorkerMode = MONITOR_FOR::KEYBIND;
-            
-            if(monitoringWorkerVkid.load() != 0) {
-                std::stringstream conversion_stream;
-                conversion_stream << "0x" << std::uppercase << std::hex << monitoringWorkerVkid.load();
-            
-                std::string converted_string;
-                conversion_stream >> converted_string;
-            
-                ui->lin_activation_parameter->setText(QString::fromStdString(converted_string));
-            } else {
-                ui->lin_activation_parameter->setText("");
-            }
-            
-            ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
-            logToConsole("Activation mode set to keybind, VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html");
-            break;
-        }
-
-        case 2 : {
-            monitoringWorkerMode = MONITOR_FOR::PROCESS_IMAGE;
-            ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerImage.load()));
-            ui->lin_activation_parameter->setPlaceholderText("E.g. TESV.exe, SkyrimSE.exe, etc");
-            logToConsole("Activation mode set to process image.");
-            break;
-        }
-
-        case 3 : {
-            monitoringWorkerMode = MONITOR_FOR::WINDOW_TITLE;
-            ui->lin_activation_parameter->setText(QString::fromStdString(monitoringWorkerTitle.load()));
-            ui->lin_activation_parameter->setPlaceholderText("E.g. Skyrim, Skyrim Special Edition, etc");
-            logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window automatically.");
-            break;
-        }
-    }
-}
-
-void MainWindow::on_btn_edit_activation_parameter_clicked() {
-    if(ui->btn_edit_activation_parameter->text() == "Edit" && monitoringWorkerMode != MONITOR_FOR::NOTHING) {
-        ui->lin_activation_parameter->setEnabled(true);
-        ui->btn_edit_activation_parameter->setText("Confirm");
-    } else if(ui->btn_edit_activation_parameter->text() == "Confirm") {
-        switch(monitoringWorkerMode) {
-            case MONITOR_FOR::KEYBIND : {
-                try {
-                    std::stringstream conversion_stream;
-                    conversion_stream << std::hex << ui->lin_activation_parameter->text().toStdString();
-
-                    uint32_t converted_vkid;
-                    conversion_stream >> converted_vkid;
-
-                    monitoringWorkerVkid = converted_vkid;
-                } catch (const std::exception& exception) {
-                    logToConsole({"Exception when trying to convert hexadecimal VKID text to an integer: ", exception.what()});
-                }
-
-                break;
-            }
-
-            case MONITOR_FOR::PROCESS_IMAGE : {
-                delete monitoringWorkerImage;
-
-                const std::string& process_image_string = ui->lin_activation_parameter->text().toStdString();
-                monitoringWorkerImage = new char[process_image_string.size() + 1];
-                std::copy(process_image_string.data(), process_image_string.data() + process_image_string.size() + 1, monitoringWorkerImage.load());
-                break;
-            }
-
-            case MONITOR_FOR::WINDOW_TITLE : {
-                delete monitoringWorkerTitle;
-
-                const std::string& window_title_string = ui->lin_activation_parameter->text().toStdString();
-                monitoringWorkerTitle = new char[window_title_string.size() + 1];
-                std::copy(window_title_string.data(), window_title_string.data() + window_title_string.size() + 1, monitoringWorkerTitle.load());
-                break;
-            }
-
-            case MONITOR_FOR::NOTHING : {
-                break;
-            }
-        }
-
-        ui->lin_activation_parameter->setEnabled(false);
-        ui->btn_edit_activation_parameter->setText("Edit");
-    }
-}
-
-void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
-    if(monitoringWorkerMode == MONITOR_FOR::WINDOW_TITLE) {
-        acquireWindowThreadSignal.store(true);
-    }
-}
-
-void MainWindow::on_btn_mutebeepboop_clicked() {
-    if(muteBeepBoop.load()) {
-        muteBeepBoop = false;
-        ui->btn_mutebeepboop->setText("Mute");
-    } else {
-        muteBeepBoop = true;
-        ui->btn_mutebeepboop->setText("Unmute");
-    }
-}
+*/
 
 void MainWindow::logToConsole(const QList<QString>& message_list) {
-    std::lock_guard<std::mutex> console_mutex_guard(consoleMutex);
+    // std::lock_guard<std::mutex> console_mutex_guard(consoleMutex);
     QString concatenated_messages;
 
     for(const auto& message : message_list) {
@@ -318,14 +530,29 @@ void MainWindow::logToConsole(const QList<QString>& message_list) {
 }
 
 void MainWindow::logToConsole(const char* message) {
-    std::lock_guard<std::mutex> console_mutex_guard(consoleMutex);
+    // std::lock_guard<std::mutex> console_mutex_guard(consoleMutex);
     
     ui->txt_console->moveCursor(QTextCursor::End);
     ui->txt_console->insertPlainText(QString(message) + '\n');
 }
 
+
 void MainWindow::closeEvent(QCloseEvent*) {
     ClipCursor(nullptr);
+}
+
+bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* result) {
+    Q_UNUSED(event_type);
+    Q_UNUSED(result);
+
+    MSG* msg = reinterpret_cast<MSG*>(message);
+
+    if (msg->message == WM_HOTKEY ) {// && msg->lParam == targetHotkeyVkid) {
+        emit TargetHotkeyVkidPressedSignal();
+        return true;
+    }
+
+    return QMainWindow::nativeEvent(event_type, message, result);
 }
 
 bool MainWindow::LoadStylesheetFile(const std::string& file_path) {
@@ -382,16 +609,25 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     
     resize(20 * desktop_window_rect.right / 100, 10 * desktop_window_rect.bottom / 100);
 
-    monitoringWorkerMode      = MONITOR_FOR::NOTHING;
-    monitoringWorkerVkid      = 0x00;
-    monitoringWorkerImage     = new char[2];
-    monitoringWorkerTitle     = new char[2];
-    acquireWindowThreadSignal = false;
-    muteBeepBoop              = false;
+    // Member Variable Initialization
+    // --------------------------------------------------
+    muteBeepBoop = false;
+    selectedActivationCondition = MONITOR_FOR::NOTHING;
+    targetHotkeyVkid = 0;
 
-    std::fill(monitoringWorkerImage.load(), monitoringWorkerImage.load() + 1, 0x00);
-    std::fill(monitoringWorkerTitle.load(), monitoringWorkerTitle.load() + 1, 0x00);
-    
+    checkActivationMethodTimer = new QTimer(this);
+
+    // monitoringWorkerMode      = MONITOR_FOR::NOTHING;
+    // monitoringWorkerVkid      = 0x00;
+    // monitoringWorkerImage     = new char[2];
+    // monitoringWorkerTitle     = new char[2];
+    // acquireWindowThreadSignal = false;
+    // muteBeepBoop              = false;
+
+    // std::fill(monitoringWorkerImage.load(), monitoringWorkerImage.load() + 1, 0x00);
+    // std::fill(monitoringWorkerTitle.load(), monitoringWorkerTitle.load() + 1, 0x00);
+
+    /*
     std::ifstream input_stream("./defaults.json", std::ios::binary);
     
     if(input_stream.good()) {
@@ -468,17 +704,20 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         
         logToConsole("Generated defaults.json. If you wish to store default values, please fill it.");
     }
+
+    */
         
-    MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
-    AcquireWindowThread = std::thread([this]() -> void { acquireWindowWorker(); });
+    // MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
+    // AcquireWindowThread = std::thread([this]() -> void { acquireWindowWorker(); });
     
     if(LoadStylesheetFile("./style_sheet.qss")) {
-        logToConsole("style_sheet.qss Loaded");
+        // logToConsole("style_sheet.qss Loaded");
     } else {
-        logToConsole("Cannot open style_sheet.qss, using default style.");
+        // logToConsole("Cannot open style_sheet.qss, using default style.");
     }
 }
 
 MainWindow::~MainWindow() {
     delete ui;
+
 }

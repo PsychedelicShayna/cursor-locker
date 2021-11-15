@@ -5,6 +5,7 @@
 
 #include <QMainWindow>
 #include <QMessageBox>
+#include <QTimer>
 
 #include <Windows.h>
 #include <TlHelp32.h>
@@ -31,6 +32,62 @@ private:
     Ui::MainWindow* ui;
     Q_OBJECT
 
+    bool muteBeepBoop;
+    void BeepBoop(QList<QPair<int, int>> freqdur_list);
+
+    // Currently selected activation method, which activationConditionChecker will use to determine what condition to check.
+    MONITOR_FOR selectedActivationCondition;
+
+    RECT getForegroundWindowRect();
+    void enableCursorLock();
+    void disableCursorLock();
+    void toggleCursorLock();
+
+    uint8_t targetHotkeyVkid;
+    bool registerTargetHotkey();
+    bool unregisterTargetHotkey();
+
+
+    QString targetForegroundWindowTitle;
+    void activateIfForegroundWindowMatchesTarget();
+
+    QString targetProcessImageName;
+    void activateIfTargetImagePresent();
+
+    // Points to the member function that the timeout() signal from the below timer is connected to.
+    void(MainWindow::*selectedActivationMethodFunction)();
+    // Timer whose timeout() signal periodically calls the selected activation method checker function.
+    // Only applies to activationMethodSlot
+    QTimer* checkActivationMethodTimer;
+
+    // Checks the state of the activation condition, and activates or deactivates the cursor lock accordingly.
+    void activationConditionChecker();
+
+
+    void logToConsole(const QList<QString>&);
+    void logToConsole(const char*);
+
+    // Override of QMainWindow's closeEvent, to ensure the cursor doesn't remain caged when the window closes.
+    void closeEvent(QCloseEvent*);
+
+    // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
+    // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.
+    bool nativeEvent(const QByteArray& event_type, void* message, long* result);
+
+signals:
+    void TargetHotkeyVkidPressedSignal();
+
+private slots:
+    void on_cbx_activation_method_currentIndexChanged(int);
+    void on_btn_edit_activation_parameter_clicked();
+    void on_btn_edit_activation_parameter_right_clicked();
+    void on_btn_mutebeepboop_clicked();
+
+private:
+    // OLD CODE BELOW THIS LINE
+    // ----------------------------------------------------------------------------------------------------
+
+/*
     // Determines what the mopnitoringWorker should monitor for in order to activate the locker.
     std::atomic<MONITOR_FOR> monitoringWorkerMode;
 
@@ -54,23 +111,18 @@ private:
     std::atomic<bool> muteBeepBoop;
 
     std::mutex consoleMutex; // Multiple threads may log to the console, therefore a mutex is used to avoid data races.
-    void logToConsole(const QList<QString>&);
-    void logToConsole(const char*);
+    */
 
-    void closeEvent(QCloseEvent*);
 
-private slots:
-    void on_cbx_activation_method_currentIndexChanged(int);
-    void on_btn_edit_activation_parameter_clicked();
-    void on_btn_edit_activation_parameter_right_clicked();
-    void on_btn_mutebeepboop_clicked();
 
 public:
     // Thread that runs monitoringWorker.
-    std::thread MonitoringThread;
+    // std::thread MonitoringThread;
 
     // Thread that runs acquireWindowWorker.
-    std::thread AcquireWindowThread;
+    // std::thread AcquireWindowThread;
+
+
 
     bool LoadStylesheetFile(const std::string&);
 
