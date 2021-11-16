@@ -8,12 +8,44 @@ enum struct MONITOR_FOR {
     WINDOW_TITLE    =   0b00000100,
 };
 
+bool MainWindow::loadStylesheetFile(const std::string& file_path) {
+    std::ifstream input_stream(file_path, std::ios::binary);
+
+    if(input_stream.good()) {
+        std::string style_sheet((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
+        input_stream.close();
+
+        setStyleSheet(QString::fromStdString(style_sheet));
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void MainWindow::beepBoop(QList<QPair<int, int>> freqdur_list) {
     if(!muteBeepBoop) {
         for(QPair<int,int>& pair : freqdur_list) {
             Beep(pair.first, pair.second);
         }
     }
+}
+
+void MainWindow::logToConsole(const QList<QString>& message_list) {
+    QString concatenated_messages;
+
+    for(const auto& message : message_list) {
+        concatenated_messages.append(message);
+    }
+
+    concatenated_messages += '\n';
+
+    ui->txt_console->moveCursor(QTextCursor::End);
+    ui->txt_console->insertPlainText(concatenated_messages);
+}
+
+void MainWindow::logToConsole(const char* message) {
+    ui->txt_console->moveCursor(QTextCursor::End);
+    ui->txt_console->insertPlainText(QString(message) + '\n');
 }
 
 RECT MainWindow::getForegroundWindowRect() {
@@ -140,7 +172,59 @@ void MainWindow::activateIfForegroundWindowMatchesTarget() {
     }
 }
 
-void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
+void MainWindow::targetNextForegroundWindow() {
+    static uint32_t attempt_counter = 0;
+
+    const auto& reset_timer_lambda = [&]() -> void {
+        targetNextForegroundWindowTimer->stop();
+        ui->lin_activation_parameter->clear();
+        ui->btn_edit_activation_parameter->setEnabled(true);
+        attempt_counter = 0;
+    };
+
+    if(++attempt_counter > 15) {
+       reset_timer_lambda();
+       return;
+    } else {
+        ui->lin_activation_parameter->setText("Switch to target window within timeframe (" + QString::number(attempt_counter) + " / 15 attempts)");
+        beepBoop({{200, 20}});
+    }
+
+    HWND foreground_window = GetForegroundWindow();
+
+    if(foreground_window != HWND(winId())) {
+        reset_timer_lambda();
+
+        char window_title_buffer[256];
+        std::fill(window_title_buffer, window_title_buffer + sizeof(window_title_buffer), 0x00);
+        GetWindowText(foreground_window, window_title_buffer, sizeof(window_title_buffer));
+
+        targetForegroundWindowTitle = QString(window_title_buffer);
+        ui->lin_activation_parameter->setText(targetForegroundWindowTitle);
+
+        beepBoop({{900, 20}, {900, 20}});
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent*) {
+    ClipCursor(nullptr);
+}
+
+bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* result) {
+    Q_UNUSED(event_type);
+    Q_UNUSED(result);
+
+    MSG* msg = reinterpret_cast<MSG*>(message);
+
+    if (msg->message == WM_HOTKEY && msg->wParam == static_cast<uint64_t>(targetHotkeyId)) {
+        emit targetHotkeyVkidPressedSignal();
+        return true;
+    }
+
+    return QMainWindow::nativeEvent(event_type, message, result);
+}
+
+void MainWindow::changeActivationMethod(int method_index) {
     disconnect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
     unregisterTargetHotkey();
 
@@ -153,15 +237,15 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
     ui->lin_activation_parameter->clear();
     disableCursorLock();
 
-    switch(index) {
+    switch(method_index) {
         case 0 : {
-            selectedActivationCondition = MONITOR_FOR::NOTHING;
+            selectedActivationMethod = MONITOR_FOR::NOTHING;
             ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
             break;
         }
 
         case 1 : {
-            selectedActivationCondition = MONITOR_FOR::KEYBIND;
+            selectedActivationMethod = MONITOR_FOR::KEYBIND;
             connect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
             registerTargetHotkey();
 
@@ -180,7 +264,7 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
         }
 
         case 2 : {
-            selectedActivationCondition = MONITOR_FOR::PROCESS_IMAGE;
+            selectedActivationMethod = MONITOR_FOR::PROCESS_IMAGE;
             selectedActivationMethodFunction = &MainWindow::activateIfTargetImagePresent;
             ui->lin_activation_parameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
 
@@ -194,7 +278,7 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
         }
 
         case 3 : {
-            selectedActivationCondition = MONITOR_FOR::WINDOW_TITLE;
+            selectedActivationMethod = MONITOR_FOR::WINDOW_TITLE;
             selectedActivationMethodFunction = &MainWindow::activateIfForegroundWindowMatchesTarget;
             ui->lin_activation_parameter->setPlaceholderText("Window title, e.g. Skyrim, Skyrim Special Edition");
 
@@ -214,12 +298,12 @@ void MainWindow::on_cbx_activation_method_currentIndexChanged(int index) {
     }
 }
 
-void MainWindow::on_btn_edit_activation_parameter_clicked() {
-    if(ui->btn_edit_activation_parameter->text() == "Edit" && selectedActivationCondition != MONITOR_FOR::NOTHING) {
+void MainWindow::editActivationMethodParameter() {
+    if(ui->btn_edit_activation_parameter->text() == "Edit" && selectedActivationMethod != MONITOR_FOR::NOTHING) {
         ui->lin_activation_parameter->setEnabled(true);
         ui->btn_edit_activation_parameter->setText("Confirm");
     } else if(ui->btn_edit_activation_parameter->text() == "Confirm") {
-        switch(selectedActivationCondition) {
+        switch(selectedActivationMethod) {
             case MONITOR_FOR::KEYBIND : {
                 try {
                     unregisterTargetHotkey();
@@ -269,8 +353,8 @@ void MainWindow::on_btn_edit_activation_parameter_clicked() {
     }
 }
 
-void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
-    if(selectedActivationCondition == MONITOR_FOR::WINDOW_TITLE) {
+void MainWindow::startForegroundWindowGrabber() {
+    if(selectedActivationMethod == MONITOR_FOR::WINDOW_TITLE) {
         if(ui->btn_edit_activation_parameter->text() == "Edit" && ui->btn_edit_activation_parameter->isEnabled()) {
             ui->btn_edit_activation_parameter->setEnabled(false);
             targetNextForegroundWindowTimer->start(500);
@@ -278,7 +362,7 @@ void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
     }
 }
 
-void MainWindow::on_btn_mutebeepboop_clicked() {
+void MainWindow::toggleMuteBeepBoop() {
     if(muteBeepBoop) {
         muteBeepBoop = false;
         ui->btn_mutebeepboop->setText("Mute");
@@ -288,91 +372,7 @@ void MainWindow::on_btn_mutebeepboop_clicked() {
     }
 }
 
-void MainWindow::targetNextForegroundWindow() {
-    static uint32_t attempt_counter = 0;
-
-    const auto& reset_timer_lambda = [&]() -> void {
-        targetNextForegroundWindowTimer->stop();
-        ui->lin_activation_parameter->clear();
-        ui->btn_edit_activation_parameter->setEnabled(true);
-        attempt_counter = 0;
-    };
-
-    if(++attempt_counter > 15) {
-       reset_timer_lambda();
-       return;
-    } else {
-        ui->lin_activation_parameter->setText("Switch to target window within timeframe (" + QString::number(attempt_counter) + " / 15 attempts)");
-        beepBoop({{200, 20}});
-    }
-
-    HWND foreground_window = GetForegroundWindow();
-
-    if(foreground_window != HWND(winId())) {
-        reset_timer_lambda();
-
-        char window_title_buffer[256];
-        std::fill(window_title_buffer, window_title_buffer + sizeof(window_title_buffer), 0x00);
-        GetWindowText(foreground_window, window_title_buffer, sizeof(window_title_buffer));
-
-        targetForegroundWindowTitle = QString(window_title_buffer);
-        ui->lin_activation_parameter->setText(targetForegroundWindowTitle);
-
-        beepBoop({{900, 20}, {900, 20}});
-    }
-}
-
-void MainWindow::logToConsole(const QList<QString>& message_list) {
-    QString concatenated_messages;
-
-    for(const auto& message : message_list) {
-        concatenated_messages.append(message);
-    }
-
-    concatenated_messages += '\n';
-
-    ui->txt_console->moveCursor(QTextCursor::End);
-    ui->txt_console->insertPlainText(concatenated_messages);
-}
-
-void MainWindow::logToConsole(const char* message) {    
-    ui->txt_console->moveCursor(QTextCursor::End);
-    ui->txt_console->insertPlainText(QString(message) + '\n');
-}
-
-void MainWindow::closeEvent(QCloseEvent*) {
-    ClipCursor(nullptr);
-}
-
-bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* result) {
-    Q_UNUSED(event_type);
-    Q_UNUSED(result);
-
-    MSG* msg = reinterpret_cast<MSG*>(message);
-
-    if (msg->message == WM_HOTKEY && msg->wParam == static_cast<uint64_t>(targetHotkeyId)) {
-        emit targetHotkeyVkidPressedSignal();
-        return true;
-    }
-
-    return QMainWindow::nativeEvent(event_type, message, result);
-}
-
-bool MainWindow::LoadStylesheetFile(const std::string& file_path) {
-    std::ifstream input_stream(file_path, std::ios::binary);
-
-    if(input_stream.good()) {
-        std::string style_sheet((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
-        input_stream.close();
-
-        setStyleSheet(QString::fromStdString(style_sheet));
-        return true;
-    } else {
-        return false;
-    }
-}
-
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow), targetHotkeyId(420) {
     ui->setupUi(this);
 
     // Configure Main Window Flags & Set Initial Window Size
@@ -397,14 +397,20 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Member Variable Initialization
     // --------------------------------------------------
     muteBeepBoop = false;
-    selectedActivationCondition = MONITOR_FOR::NOTHING;
+    selectedActivationMethod = MONITOR_FOR::NOTHING;
     targetHotkeyVkid = 0;
-    targetHotkeyId = 420;
 
     checkActivationMethodTimer = new QTimer(this);
-
     targetNextForegroundWindowTimer = new QTimer(this);
+
+    // Event Connections
+    // --------------------------------------------------
     connect(targetNextForegroundWindowTimer, &QTimer::timeout, this, &MainWindow::targetNextForegroundWindow);
+
+    // Class SLOT() connections.
+    connect(ui->cbx_activation_method, SIGNAL(currentIndexChanged(int)), this, SLOT(changeActivationMethod(int)));
+    connect(ui->btn_edit_activation_parameter, SIGNAL(clicked()), this, SLOT(editActivationMethodParameter()));
+    connect(ui->btn_mutebeepboop, SIGNAL(clicked()), this, SLOT(toggleMuteBeepBoop()));
 
     // Load JSON Defaults
     // --------------------------------------------------
@@ -480,7 +486,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         
     }
     
-    if(LoadStylesheetFile("./style_sheet.qss")) {
+    if(loadStylesheetFile("./style_sheet.qss")) {
         logToConsole("Loaded QSS stylesheet ./style_sheet.qss - theme has been applied.");
     } else {
         logToConsole("Cannot open style_sheet.qss, using default Windows style.");
@@ -498,7 +504,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
                 QMouseEvent* mouse_event = reinterpret_cast<QMouseEvent*>(event);
 
                 if(mouse_event->button() == Qt::RightButton) {
-                    mainWindowParent->on_btn_edit_activation_parameter_right_clicked();
+                    mainWindowParent->startForegroundWindowGrabber();
                 }
             }
 
