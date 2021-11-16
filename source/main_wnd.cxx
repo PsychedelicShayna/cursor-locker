@@ -454,12 +454,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
             if(default_values.contains("method") && default_values["method"].is_string() && default_values["method"] != "") {
                 const std::string& method_string = default_values["method"].get<std::string>();
-                static const Json method_resolver {{"vkid", 1}, {"image", 2}, {"title", 3}};
+                static const Json method_resolver = {{"vkid", 1}, {"image", 2}, {"title", 3}};
 
                 if(method_resolver.contains(method_string)) {
                     ui->cbx_activation_method->setCurrentIndex(method_resolver[method_string].get<uint8_t>());
+                    logToConsole({"defaults.json: Activation method exists!"});
                 } else {
-                    logToConsole({"defaults.json: Invalid activation method \"", QString::fromStdString(method_resolver), "\" for \"method\" key."});
+                    logToConsole({"defaults.json: Invalid activation method \"", QString::fromStdString(method_string), "\" for \"method\" key."});
                 }
             }
 
