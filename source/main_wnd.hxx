@@ -61,9 +61,8 @@ private:
     // Only applies to activationMethodSlot
     QTimer* checkActivationMethodTimer;
 
-    // Checks the state of the activation condition, and activates or deactivates the cursor lock accordingly.
-    void activationConditionChecker();
-
+    void targetNextForegroundWindow();
+    QTimer* targetNextForegroundWindowTimer;
 
     void logToConsole(const QList<QString>&);
     void logToConsole(const char*);

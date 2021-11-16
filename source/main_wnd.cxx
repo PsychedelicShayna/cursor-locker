@@ -273,7 +273,12 @@ void MainWindow::on_btn_edit_activation_parameter_clicked() {
 }
 
 void MainWindow::on_btn_edit_activation_parameter_right_clicked() {
-
+    if(selectedActivationCondition == MONITOR_FOR::WINDOW_TITLE) {
+        if(ui->btn_edit_activation_parameter->text() == "Edit" && ui->btn_edit_activation_parameter->isEnabled()) {
+            ui->btn_edit_activation_parameter->setEnabled(false);
+            targetNextForegroundWindowTimer->start(500);
+        }
+    }
 }
 
 void MainWindow::on_btn_mutebeepboop_clicked() {
@@ -588,6 +593,40 @@ void MainWindow::acquireWindowWorker() {
 }
 */
 
+void MainWindow::targetNextForegroundWindow() {
+    static uint32_t attempt_counter = 0;
+
+    const auto& reset_timer_lambda = [&]() -> void {
+        targetNextForegroundWindowTimer->stop();
+        ui->lin_activation_parameter->clear();
+        ui->btn_edit_activation_parameter->setEnabled(true);
+        attempt_counter = 0;
+    };
+
+    if(++attempt_counter > 15) {
+       reset_timer_lambda();
+       return;
+    } else {
+        ui->lin_activation_parameter->setText("Switch to target window within timeframe (" + QString::number(attempt_counter) + " / 15 attempts)");
+        BeepBoop({{200, 20}});
+    }
+
+    HWND foreground_window = GetForegroundWindow();
+
+    if(foreground_window != HWND(winId())) {
+        reset_timer_lambda();
+
+        char window_title_buffer[256];
+        std::fill(window_title_buffer, window_title_buffer + sizeof(window_title_buffer), 0x00);
+        GetWindowText(foreground_window, window_title_buffer, sizeof(window_title_buffer));
+
+        targetForegroundWindowTitle = QString(window_title_buffer);
+        ui->lin_activation_parameter->setText(targetForegroundWindowTitle);
+
+        BeepBoop({{900, 20}, {900, 20}});
+    }
+}
+
 void MainWindow::logToConsole(const QList<QString>& message_list) {
     // std::lock_guard<std::mutex> console_mutex_guard(consoleMutex);
     QString concatenated_messages;
@@ -690,6 +729,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     targetHotkeyId = 420;
 
     checkActivationMethodTimer = new QTimer(this);
+
+    targetNextForegroundWindowTimer = new QTimer(this);
+    connect(targetNextForegroundWindowTimer, &QTimer::timeout, this, &MainWindow::targetNextForegroundWindow);
 
     std::ifstream input_stream("./defaults.json", std::ios::binary);
     
