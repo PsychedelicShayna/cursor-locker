@@ -462,6 +462,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
                     logToConsole({"defaults.json: Invalid activation method \"", QString::fromStdString(method_resolver), "\" for \"method\" key."});
                 }
             }
+
+            if(default_values.contains("muted") && default_values["muted"].is_boolean()) {
+                const bool& muted_value = default_values["muted"].get<bool>();
+                muteBeepBoop = muted_value;
+                ui->btn_mutebeepboop->setText("Unmute");
+            }
         }
     } else {
         std::ofstream output_stream("./defaults.json", std::ios::binary);
@@ -471,7 +477,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
                 {"vkid", ""},
                 {"image", ""},
                 {"title", ""},
-                {"method", ""}
+                {"method", ""},
+                {"muted", false}
             };
             
             const std::string& dumped_json = json_template.dump(4);
