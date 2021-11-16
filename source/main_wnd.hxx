@@ -5,6 +5,7 @@
 
 #include <QMainWindow>
 #include <QMessageBox>
+#include <QScrollBar>
 #include <QTimer>
 
 #include <Windows.h>
@@ -22,6 +23,10 @@ namespace Ui {
 using Json = nlohmann::json;
 
 enum struct MONITOR_FOR;
+
+enum CONSOLE_LOG_LEVELS {
+    CLOG_INFO = 0, CLOG_WARNING = 1, CLOG_ERROR = 2, CLOG_EXCEPTION = 3
+};
 
 class MainWindow : public QMainWindow {
 private:
@@ -42,9 +47,12 @@ private:
     // Stops beepBoop from functioning when enabled.
     bool muteBeepBoop;
 
+    // logToConsole will only log messages equal to or higher to this message level.
+    CONSOLE_LOG_LEVELS minimumLogLevel;
+
     // Functions to simplify logging messages to the UI's debug console.
-    void logToConsole(const QList<QString>&);
-    void logToConsole(const char*);
+    void logToConsole(const QList<QString>&, CONSOLE_LOG_LEVELS loglevel = CLOG_INFO);
+    void logToConsole(const char*, CONSOLE_LOG_LEVELS loglevel = CLOG_INFO);
 
     // Return the RECT of the current foreground window.
     RECT getForegroundWindowRect();
