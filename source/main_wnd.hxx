@@ -33,7 +33,7 @@ private:
     Q_OBJECT
 
     bool muteBeepBoop;
-    void BeepBoop(QList<QPair<int, int>> freqdur_list);
+    void beepBoop(QList<QPair<int, int>> freqdur_list);
 
     // Currently selected activation method, which activationConditionChecker will use to determine what condition to check.
     MONITOR_FOR selectedActivationCondition;
