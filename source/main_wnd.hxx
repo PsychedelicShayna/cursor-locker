@@ -43,6 +43,7 @@ private:
     void disableCursorLock();
     bool toggleCursorLock();
 
+    uint32_t targetHotkeyId;
     uint8_t targetHotkeyVkid;
     bool registerTargetHotkey();
     bool unregisterTargetHotkey();

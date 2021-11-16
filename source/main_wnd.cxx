@@ -48,11 +48,11 @@ bool MainWindow::toggleCursorLock() {
 }
 
 bool MainWindow::registerTargetHotkey() {
-    return RegisterHotKey(HWND(winId()), targetHotkeyVkid, MOD_NOREPEAT, targetHotkeyVkid);
+    return RegisterHotKey(HWND(winId()), targetHotkeyId, MOD_NOREPEAT, targetHotkeyVkid);
 }
 
 bool MainWindow::unregisterTargetHotkey() {
-    return UnregisterHotKey(HWND(winId()), targetHotkeyVkid);
+    return UnregisterHotKey(HWND(winId()), targetHotkeyId);
 }
 
 void MainWindow::targetHotkeyVkidPressedSlot() {
@@ -620,7 +620,7 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* 
 
     MSG* msg = reinterpret_cast<MSG*>(message);
 
-    if (msg->message == WM_HOTKEY && msg->wParam == static_cast<uint64_t>(targetHotkeyVkid)) {
+    if (msg->message == WM_HOTKEY && msg->wParam == static_cast<uint64_t>(targetHotkeyId)) {
         emit targetHotkeyVkidPressedSignal();
         return true;
     }
@@ -680,84 +680,66 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     GetWindowRect(desktop_window_handle, &desktop_window_rect);
     CloseHandle(desktop_window_handle);
     
-    resize(20 * desktop_window_rect.right / 100, 10 * desktop_window_rect.bottom / 100);
+    resize(20 * desktop_window_rect.right / 100, 16 * desktop_window_rect.bottom / 100);
 
     // Member Variable Initialization
     // --------------------------------------------------
     muteBeepBoop = false;
     selectedActivationCondition = MONITOR_FOR::NOTHING;
     targetHotkeyVkid = 0;
+    targetHotkeyId = 420;
 
     checkActivationMethodTimer = new QTimer(this);
 
-    // monitoringWorkerMode      = MONITOR_FOR::NOTHING;
-    // monitoringWorkerVkid      = 0x00;
-    // monitoringWorkerImage     = new char[2];
-    // monitoringWorkerTitle     = new char[2];
-    // acquireWindowThreadSignal = false;
-    // muteBeepBoop              = false;
-
-    // std::fill(monitoringWorkerImage.load(), monitoringWorkerImage.load() + 1, 0x00);
-    // std::fill(monitoringWorkerTitle.load(), monitoringWorkerTitle.load() + 1, 0x00);
-
-    /*
     std::ifstream input_stream("./defaults.json", std::ios::binary);
     
     if(input_stream.good()) {
         std::string raw_json_string((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
         input_stream.close();
         
-        Json default_values = Json::parse(raw_json_string);
-        
-        logToConsole("Default values from defaults.json have been parsed.");
-        
-        uint8_t default_cbx_activation_method_index = 0;
+        Json default_values;
 
-        for(const auto& pair : default_values.items()) {
-            if(pair.key() == "vkid") {
-                std::stringstream conversion_stream;
-                conversion_stream << std::hex << pair.value().get<std::string>();
-                
-                uint32_t converted_value = 0;
-                conversion_stream >> converted_value;
-                
-                monitoringWorkerVkid = converted_value;
-                
-                logToConsole({"Loaded VKID(", QString::fromStdString(pair.value()), ") from defaults.json"});
-            } else if(pair.key() == "image") {
-                const std::string& image = pair.value();
-                
-                char* heap_copy = new char[image.size() + 1];                
-                std::copy(image.data(), image.data() + image.size() + 1, heap_copy);
-                
-                delete monitoringWorkerImage.load();                
-                monitoringWorkerImage.store(heap_copy);                
-                
-                logToConsole({"Loaded image name(", QString::fromStdString(pair.value()), ") from defaults.json"});
-            } else if(pair.key() == "title") {
-                const std::string& title = pair.value();
-                
-                char* heap_copy = new char[title.size() + 1];
-                std::copy(title.data(), title.data() + title.size() + 1, heap_copy);
-                
-                delete monitoringWorkerTitle.load();
-                monitoringWorkerTitle.store(heap_copy);
-                
-                logToConsole({"Loaded window title(", QString::fromStdString(pair.value()),") from defaults.json"});
-            } else if(pair.key() == "method") {
-                if(pair.value() == "vkid") {
-                    default_cbx_activation_method_index = 1;
-                } else if(pair.value() == "image") {
-                    default_cbx_activation_method_index = 2;
-                } else if(pair.value() == "title") {
-                    default_cbx_activation_method_index = 3;
-                }
-
-                logToConsole({"Loaded activation method(", QString::fromStdString(pair.value()),") from defaults.json"});
-            }
+        try {
+            default_values = Json::parse(raw_json_string);
+            logToConsole("Default values from defaults.json have been parsed.");
+        } catch(const Json::exception& e) {
+            logToConsole("Could not parse values from defaults.json, the file might be incorrectly formatted.");
+            logToConsole({"Json::exception::what message: ", e.what()});
+        } catch(const std::exception& e) {
+            logToConsole("Unknown exception thrown when parsing values from defaults.json");
+            logToConsole({"std::exception::what message: ", e.what()});
         }
 
-        ui->cbx_activation_method->setCurrentIndex(default_cbx_activation_method_index);
+        if(default_values.size()) {
+            if(default_values.contains("vkid") && default_values["vkid"].is_string() && default_values["vkid"] != "") {
+                const std::string& vkid_hex_string = default_values["vkid"].get<std::string>();
+                uint8_t vkid = static_cast<uint8_t>(strtol(vkid_hex_string.c_str(), nullptr, 16));
+                targetHotkeyVkid = vkid;
+
+                logToConsole({"defaults.json: Loaded hotkey VKID '0x", QString::number(targetHotkeyVkid, 16), "'"});
+            }
+
+            if(default_values.contains("image") && default_values["image"].is_string() && default_values["image"] != "") {
+                targetProcessImageName = QString::fromStdString(default_values["image"].get<std::string>());
+                logToConsole({"defaults.json: Loaded process image name \"", targetProcessImageName, "\""});
+            }
+
+            if(default_values.contains("title") && default_values["title"].is_string() && default_values["title"] != "") {
+                targetForegroundWindowTitle = QString::fromStdString(default_values["title"].get<std::string>());
+                logToConsole({"defaults.json: Loaded foreground window title \"", targetForegroundWindowTitle, "\""});
+            }
+
+            if(default_values.contains("method") && default_values["method"].is_string() && default_values["method"] != "") {
+                const std::string& method_string = default_values["method"].get<std::string>();
+                static const Json method_resolver {{"vkid", 1}, {"image", 2}, {"title", 3}};
+
+                if(method_resolver.contains(method_string)) {
+                    ui->cbx_activation_method->setCurrentIndex(method_resolver[method_string].get<uint8_t>());
+                } else {
+                    logToConsole({"defaults.json: Invalid activation method \"", QString::fromStdString(method_resolver), "\" for \"method\" key."});
+                }
+            }
+        }
     } else {
         std::ofstream output_stream("./defaults.json", std::ios::binary);
         
@@ -777,20 +759,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         
         logToConsole("Generated defaults.json. If you wish to store default values, please fill it.");
     }
-
-    */
-        
-    // MonitoringThread = std::thread([this]() -> void { monitoringWorker(); });
-    // AcquireWindowThread = std::thread([this]() -> void { acquireWindowWorker(); });
     
     if(LoadStylesheetFile("./style_sheet.qss")) {
-        // logToConsole("style_sheet.qss Loaded");
+        logToConsole("Loaded QSS stylesheet ./style_sheet.qss - theme has been applied.");
     } else {
-        // logToConsole("Cannot open style_sheet.qss, using default style.");
+        logToConsole("Cannot open style_sheet.qss, using default Windows style.");
     }
 }
 
 MainWindow::~MainWindow() {
     delete ui;
-
 }
