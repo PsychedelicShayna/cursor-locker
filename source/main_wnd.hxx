@@ -10,12 +10,8 @@
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <iostream>
-#include <sstream>
 #include <fstream>
 #include <string>
-#include <thread>
-#include <atomic>
-#include <mutex>
 
 #include "json.hxx"
 
