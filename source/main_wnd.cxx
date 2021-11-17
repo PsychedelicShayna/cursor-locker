@@ -33,6 +33,8 @@ void MainWindow::beepBoop(QList<QPair<int, int>> freqdur_list) {
 }
 
 void MainWindow::logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LEVELS loglevel) {
+    if(loglevel < minimumLogLevel) return;
+
     QString concatenated_messages;
 
     switch(loglevel) {
@@ -370,7 +372,6 @@ void MainWindow::editActivationMethodParameter() {
                     } else {
                         logToConsole({"Invalid hexadecimal value '", vkid_str, "' for activation method parameter."}, CLOG_WARNING);
                         ui->lin_activation_parameter->clear();
-                        QMessageBox::warning(this, "Invalid Value", "The provided activation method parameter cannot be interpreted as hexadecimal VKID!");
                     }
                 }
 
@@ -414,6 +415,39 @@ void MainWindow::toggleMuteBeepBoop() {
         muteBeepBoop = true;
         ui->btn_mutebeepboop->setText("Unmute");
     }
+}
+
+void MainWindow::showConsoleContextMenu(const QPoint& point) {
+    static QMenu* context_menu = nullptr;
+    const QPoint global_point = ui->txt_console->mapToGlobal(point);
+
+    if(context_menu == nullptr) {
+        context_menu = new QMenu(this);
+        QAction* ac_clear_console = context_menu->addAction("Clear Console");
+
+        QMenu* submenu_loglevels = context_menu->addMenu("Log Levels");
+        submenu_loglevels->addAction(">= INFO")->setData(0);
+        submenu_loglevels->addAction(">= WARNING")->setData(1);
+        submenu_loglevels->addAction(">= ERROR")->setData(2);
+        submenu_loglevels->addAction(">= EXCEPTION")->setData(3);
+
+        connect(context_menu, &QMenu::triggered, [=](QAction* action) -> void {
+            if(action == ac_clear_console) {
+                ui->txt_console->clear();
+            } else if(action->parentWidget() == submenu_loglevels) {
+                minimumLogLevel = static_cast<CONSOLE_LOG_LEVELS>(action->data().toInt());
+
+                for(QAction* other_action : submenu_loglevels->actions()) {
+                    other_action->setChecked(false);
+                }
+
+                action->setCheckable(true);
+                action->setChecked(true);
+            }
+        });
+    }
+
+    context_menu->popup(global_point);
 }
 
 MainWindow::MainWindow(QWidget* parent)
@@ -461,6 +495,8 @@ MainWindow::MainWindow(QWidget* parent)
     connect(ui->cbx_activation_method, SIGNAL(currentIndexChanged(int)), this, SLOT(changeActivationMethod(int)));
     connect(ui->btn_edit_activation_parameter, SIGNAL(clicked()), this, SLOT(editActivationMethodParameter()));
     connect(ui->btn_mutebeepboop, SIGNAL(clicked()), this, SLOT(toggleMuteBeepBoop()));
+
+    connect(ui->txt_console, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(showConsoleContextMenu(const QPoint&)));
 
     // Load JSON Defaults
     // --------------------------------------------------

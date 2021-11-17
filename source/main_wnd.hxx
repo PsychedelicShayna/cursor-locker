@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QTimer>
+#include <QMenu>
 
 #include <Windows.h>
 #include <TlHelp32.h>
@@ -157,6 +158,9 @@ private slots:
 
     // Connected in constructor to btn_mutebeepboop's clicked() signal.
     void toggleMuteBeepBoop();
+
+    // Display the debug console's custom context menu.
+    void showConsoleContextMenu(const QPoint& point);
 
 public:
     explicit MainWindow(QWidget* parent = nullptr);
