@@ -32,32 +32,39 @@ void MainWindow::beepBoop(QList<QPair<int, int>> freqdur_list) {
     }
 }
 
-void MainWindow::logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LEVELS loglevel) {
-    if(loglevel < minimumLogLevel) return;
+void MainWindow::displayLogMessagesInConsole(bool just_add_latest) {
+    auto l_print_message_pair = [this](const QPair<CONSOLE_LOG_LEVELS, QString>& pair) -> void {
+        if(minimumLogLevel > pair.first) return;
 
-    QString concatenated_messages;
+        ui->txt_console->moveCursor(QTextCursor::End);
 
-    switch(loglevel) {
-        case CLOG_INFO : {
-            concatenated_messages.append("[INFO] ");
-            break;
-        }
+        static const QMap<CONSOLE_LOG_LEVELS, QString>& loglevel_resolver {
+            {CLOG_INFO, "[INFO] "}, {CLOG_WARNING, "[WARNING] "},
+            {CLOG_ERROR, "[ERROR] "}, {CLOG_EXCEPTION, "[EXCEPTION] "}
+        };
 
-        case CLOG_WARNING : {
-            concatenated_messages.append("[WARNING] ");
-            break;
-        }
+        const QString& loglevel_str = loglevel_resolver.contains(pair.first)
+                ? loglevel_resolver[pair.first]
+                : "UNKNOWN";
 
-        case CLOG_ERROR : {
-            concatenated_messages.append("[ERROR] ");
-            break;
-        }
+        ui->txt_console->insertPlainText(loglevel_str + pair.second);
+    };
 
-        case CLOG_EXCEPTION : {
-            concatenated_messages.append("[EXCEPTION] ");
-            break;
+    if(just_add_latest) {
+        const auto& latest_pair = logMessages.last();
+        l_print_message_pair(latest_pair);
+    } else {
+        ui->txt_console->clear();
+        for(const auto& pair : logMessages) {
+            l_print_message_pair(pair);
         }
     }
+
+    ui->txt_console->verticalScrollBar()->setValue(ui->txt_console->verticalScrollBar()->maximum());
+}
+
+void MainWindow::logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LEVELS loglevel) {
+    QString concatenated_messages;
 
     for(const auto& message : message_list) {
         concatenated_messages.append(message);
@@ -65,9 +72,8 @@ void MainWindow::logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LE
 
     concatenated_messages += '\n';
 
-    ui->txt_console->moveCursor(QTextCursor::End);
-    ui->txt_console->insertPlainText(concatenated_messages);
-    ui->txt_console->verticalScrollBar()->setValue(ui->txt_console->verticalScrollBar()->maximum());
+    logMessages.append(QPair(loglevel, concatenated_messages));
+    displayLogMessagesInConsole();
 }
 
 void MainWindow::logToConsole(const char* message, CONSOLE_LOG_LEVELS loglevel) {
@@ -433,9 +439,11 @@ void MainWindow::showConsoleContextMenu(const QPoint& point) {
 
         connect(context_menu, &QMenu::triggered, [=](QAction* action) -> void {
             if(action == ac_clear_console) {
-                ui->txt_console->clear();
+                logMessages.clear();
+                displayLogMessagesInConsole(false);
             } else if(action->parentWidget() == submenu_loglevels) {
                 minimumLogLevel = static_cast<CONSOLE_LOG_LEVELS>(action->data().toInt());
+                displayLogMessagesInConsole(false);
 
                 for(QAction* other_action : submenu_loglevels->actions()) {
                     other_action->setChecked(false);

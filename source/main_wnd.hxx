@@ -48,8 +48,11 @@ private:
     // Stops beepBoop from functioning when enabled.
     bool muteBeepBoop;
 
-    // logToConsole will only log messages equal to or higher to this message level.
+    // displayLogMessagesInConsole will display log messages equal to or higher to this message level.
     CONSOLE_LOG_LEVELS minimumLogLevel;
+
+    QList<QPair<CONSOLE_LOG_LEVELS, QString>> logMessages;
+    void displayLogMessagesInConsole(bool just_add_latest=true);
 
     // Functions to simplify logging messages to the UI's debug console.
     void logToConsole(const QList<QString>&, CONSOLE_LOG_LEVELS loglevel = CLOG_INFO);
