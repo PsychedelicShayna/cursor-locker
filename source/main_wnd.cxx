@@ -221,13 +221,13 @@ void MainWindow::targetNextForegroundWindow() {
         ui->btn_edit_activation_parameter->setEnabled(true);
         attempt_counter = 0;
 
-        logToConsole("Called reset_timer_lambda()");
+        logToConsole("Called reset_timer_lambda()", CLOG_INFO);
     };
 
     if(++attempt_counter > 15) {
-       reset_timer_lambda();
-       logToConsole("reset_timer_lambda() Called because of attempt counter overflow.", CLOG_INFO);
-       return;
+        reset_timer_lambda();
+        logToConsole("reset_timer_lambda() Called because of attempt counter overflow.", CLOG_INFO);
+        return;
     } else {
         ui->lin_activation_parameter->setText("Switch to target window within timeframe (" + QString::number(attempt_counter) + " / 15 attempts)");
         beepBoop({{200, 20}});
@@ -290,61 +290,61 @@ void MainWindow::changeActivationMethod(int method_index) {
     logToConsole("--------------------------------------------------", CLOG_INFO);
 
     switch(method_index) {
-        case 0 : {
-            logToConsole("Activation method set to nothing.", CLOG_INFO);
+    case 0 : {
+        logToConsole("Activation method set to nothing.", CLOG_INFO);
 
-            selectedActivationMethod = MONITOR_FOR::NOTHING;
-            ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
-            break;
+        selectedActivationMethod = MONITOR_FOR::NOTHING;
+        ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
+        break;
+    }
+
+    case 1 : {
+        logToConsole("Activation mode set to VKID keybind.", CLOG_INFO);
+        logToConsole("VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html", CLOG_INFO);
+
+        selectedActivationMethod = MONITOR_FOR::KEYBIND;
+        connect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
+        registerTargetHotkey();
+
+        ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
+
+        if(targetHotkeyVkid != 0) {
+            char hex_vkid[5];
+            std::fill(hex_vkid, hex_vkid + sizeof(hex_vkid), 0x00);
+            sprintf(hex_vkid, "0x%02X", targetHotkeyVkid);
+            ui->lin_activation_parameter->setText(QString(hex_vkid));
         }
 
-        case 1 : {
-            logToConsole("Activation mode set to VKID keybind.", CLOG_INFO);
-            logToConsole("VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html", CLOG_INFO);
+        break;
+    }
 
-            selectedActivationMethod = MONITOR_FOR::KEYBIND;
-            connect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
-            registerTargetHotkey();
+    case 2 : {
+        logToConsole("Activation mode set to process image.", CLOG_INFO);
 
-            ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
+        selectedActivationMethod = MONITOR_FOR::PROCESS_IMAGE;
+        selectedActivationMethodFunction = &MainWindow::activateIfTargetImagePresent;
+        ui->lin_activation_parameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
 
-            if(targetHotkeyVkid != 0) {
-                char hex_vkid[5];
-                std::fill(hex_vkid, hex_vkid + sizeof(hex_vkid), 0x00);
-                sprintf(hex_vkid, "0x%02X", targetHotkeyVkid);
-                ui->lin_activation_parameter->setText(QString(hex_vkid));
-            }
-
-            break;
+        if(targetProcessImageName.size()) {
+            ui->lin_activation_parameter->setText(QString(targetProcessImageName));
         }
 
-        case 2 : {
-            logToConsole("Activation mode set to process image.", CLOG_INFO);
+        break;
+    }
 
-            selectedActivationMethod = MONITOR_FOR::PROCESS_IMAGE;
-            selectedActivationMethodFunction = &MainWindow::activateIfTargetImagePresent;
-            ui->lin_activation_parameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
+    case 3 : {
+        logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.", CLOG_INFO);
 
-            if(targetProcessImageName.size()) {
-                ui->lin_activation_parameter->setText(QString(targetProcessImageName));
-            }
+        selectedActivationMethod = MONITOR_FOR::WINDOW_TITLE;
+        selectedActivationMethodFunction = &MainWindow::activateIfForegroundWindowMatchesTarget;
+        ui->lin_activation_parameter->setPlaceholderText("Window title, e.g. Skyrim, Skyrim Special Edition");
 
-            break;
+        if(targetForegroundWindowTitle.size()) {
+            ui->lin_activation_parameter->setText(QString(targetForegroundWindowTitle));
         }
 
-        case 3 : {
-            logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.", CLOG_INFO);
-
-            selectedActivationMethod = MONITOR_FOR::WINDOW_TITLE;
-            selectedActivationMethodFunction = &MainWindow::activateIfForegroundWindowMatchesTarget;
-            ui->lin_activation_parameter->setPlaceholderText("Window title, e.g. Skyrim, Skyrim Special Edition");
-
-            if(targetForegroundWindowTitle.size()) {
-                ui->lin_activation_parameter->setText(QString(targetForegroundWindowTitle));
-            }
-
-            break;
-        }
+        break;
+    }
     }
 
     if(selectedActivationMethodFunction != nullptr) {
@@ -359,44 +359,44 @@ void MainWindow::editActivationMethodParameter() {
         ui->btn_edit_activation_parameter->setText("Confirm");
     } else if(ui->btn_edit_activation_parameter->text() == "Confirm") {
         switch(selectedActivationMethod) {
-            case MONITOR_FOR::KEYBIND : {
-                unregisterTargetHotkey();
+        case MONITOR_FOR::KEYBIND : {
+            unregisterTargetHotkey();
 
-                QString vkid_str = ui->lin_activation_parameter->text();
+            QString vkid_str = ui->lin_activation_parameter->text();
 
-                if(vkid_str.size()) {
-                    uint8_t vkid = static_cast<uint8_t>(strtol(vkid_str.toStdString().c_str(), nullptr, 16));
+            if(vkid_str.size()) {
+                uint8_t vkid = static_cast<uint8_t>(strtol(vkid_str.toStdString().c_str(), nullptr, 16));
 
-                    if(vkid != 0) {
-                        char hex_vkid[6];
-                        std::fill(hex_vkid, hex_vkid + sizeof(hex_vkid), 0x00);
-                        sprintf(hex_vkid, "0x%02X", vkid);
-                        ui->lin_activation_parameter->setText(hex_vkid);
+                if(vkid != 0) {
+                    char hex_vkid[6];
+                    std::fill(hex_vkid, hex_vkid + sizeof(hex_vkid), 0x00);
+                    sprintf(hex_vkid, "0x%02X", vkid);
+                    ui->lin_activation_parameter->setText(hex_vkid);
 
-                        targetHotkeyVkid = vkid;
-                        registerTargetHotkey();
-                    } else {
-                        logToConsole({"Invalid hexadecimal value '", vkid_str, "' for activation method parameter."}, CLOG_WARNING);
-                        ui->lin_activation_parameter->clear();
-                    }
+                    targetHotkeyVkid = vkid;
+                    registerTargetHotkey();
+                } else {
+                    logToConsole({"Invalid hexadecimal value '", vkid_str, "' for activation method parameter."}, CLOG_WARNING);
+                    ui->lin_activation_parameter->clear();
                 }
-
-                break;
             }
 
-            case MONITOR_FOR::PROCESS_IMAGE : {
-                targetProcessImageName = ui->lin_activation_parameter->text();
-                break;
-            }
+            break;
+        }
 
-            case MONITOR_FOR::WINDOW_TITLE : {
-                targetForegroundWindowTitle = ui->lin_activation_parameter->text();
-                break;
-            }
+        case MONITOR_FOR::PROCESS_IMAGE : {
+            targetProcessImageName = ui->lin_activation_parameter->text();
+            break;
+        }
 
-            case MONITOR_FOR::NOTHING : {
-                break;
-            }
+        case MONITOR_FOR::WINDOW_TITLE : {
+            targetForegroundWindowTitle = ui->lin_activation_parameter->text();
+            break;
+        }
+
+        case MONITOR_FOR::NOTHING : {
+            break;
+        }
         }
 
         ui->lin_activation_parameter->setEnabled(false);
@@ -459,31 +459,31 @@ void MainWindow::showConsoleContextMenu(const QPoint& point) {
 }
 
 MainWindow::MainWindow(QWidget* parent)
-:
-    QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    minimumLogLevel(CLOG_INFO),
-    targetHotkeyId(420)
+    :
+      QMainWindow(parent),
+      ui(new Ui::MainWindow),
+      minimumLogLevel(CLOG_INFO),
+      targetHotkeyId(420)
 {
     ui->setupUi(this);
 
     // Configure Main Window Flags & Set Initial Window Size
     // --------------------------------------------------
     setWindowFlags(
-        Qt::Dialog |
-        Qt::CustomizeWindowHint |
-        Qt::WindowTitleHint |
-        Qt::WindowCloseButtonHint |
-        Qt::WindowMinimizeButtonHint |
-        Qt::WindowMaximizeButtonHint
-    );
+                Qt::Dialog |
+                Qt::CustomizeWindowHint |
+                Qt::WindowTitleHint |
+                Qt::WindowCloseButtonHint |
+                Qt::WindowMinimizeButtonHint |
+                Qt::WindowMaximizeButtonHint
+                );
 
     HWND desktop_window_handle = GetDesktopWindow();
     RECT desktop_window_rect;
 
     GetWindowRect(desktop_window_handle, &desktop_window_rect);
     CloseHandle(desktop_window_handle);
-    
+
     resize(20 * desktop_window_rect.right / 100, 16 * desktop_window_rect.bottom / 100);
 
     // Member Variable Initialization
@@ -509,11 +509,11 @@ MainWindow::MainWindow(QWidget* parent)
     // Load JSON Defaults
     // --------------------------------------------------
     std::ifstream input_stream("./defaults.json", std::ios::binary);
-    
+
     if(input_stream.good()) {
         std::string raw_json_string((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
         input_stream.close();
-        
+
         Json default_values;
 
         try {
@@ -595,7 +595,7 @@ MainWindow::MainWindow(QWidget* parent)
         }
     } else {
         std::ofstream output_stream("./defaults.json", std::ios::binary);
-        
+
         if(output_stream.good()) {
             Json json_template = {
                 {"vkid", ""},
@@ -604,9 +604,9 @@ MainWindow::MainWindow(QWidget* parent)
                 {"method", ""},
                 {"muted", false}
             };
-            
+
             const std::string& dumped_json = json_template.dump(4);
-            
+
             output_stream.write(dumped_json.data(), dumped_json.size());
             output_stream.close();
 

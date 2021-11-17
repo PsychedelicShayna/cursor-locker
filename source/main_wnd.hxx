@@ -37,7 +37,7 @@ private:
     // Currently selected activation method, which activationConditionChecker will use to determine what condition to check.
     MONITOR_FOR selectedActivationMethod;
 
-// Utility Functions
+    // Utility Functions
     // ----------------------------------------------------------------------------------------------------
     // Loads a QSS stylesheet from a file, and applies it.
     bool loadStylesheetFile(const std::string&);
@@ -71,7 +71,7 @@ private:
     bool toggleCursorLock();
     // ----------------------------------------------------------------------------------------------------
 
-// Hotkey Activation Method
+    // Hotkey Activation Method
     // ----------------------------------------------------------------------------------------------------
     // The ID by which the registered hotkey is refered to in WinAPI, assigned once in constructor.
     const uint32_t targetHotkeyId;
@@ -90,7 +90,7 @@ private:
     void targetHotkeyVkidPressedSlot();
     // ----------------------------------------------------------------------------------------------------
 
-// Process Image Activation Method
+    // Process Image Activation Method
     // ----------------------------------------------------------------------------------------------------
     // Stores the process image name that should be used by activateIfTargetImagePresent.
     QString targetProcessImageName;
@@ -101,7 +101,7 @@ private:
     void activateIfTargetImagePresent();
     // ----------------------------------------------------------------------------------------------------
 
-// Foreground Window Title Activation Method
+    // Foreground Window Title Activation Method
     // ----------------------------------------------------------------------------------------------------
     // Stores the window title that should be used by activateIfForegroundWindowMatchesTarget.
     QString targetForegroundWindowTitle;
@@ -112,7 +112,7 @@ private:
     void activateIfForegroundWindowMatchesTarget();
     // ----------------------------------------------------------------------------------------------------
 
-// Timer For Timed Activation Methods (Image Name, Window Title)
+    // Timer For Timed Activation Methods (Image Name, Window Title)
     // ----------------------------------------------------------------------------------------------------
     // Points to the member function that the timeout() signal from the below timer is connected to.
     void(MainWindow::*selectedActivationMethodFunction)();
@@ -121,7 +121,7 @@ private:
     QTimer* checkActivationMethodTimer;
     // ----------------------------------------------------------------------------------------------------
 
-// Foreground Window Grabber (edit button right-click)
+    // Foreground Window Grabber (edit button right-click)
     // ----------------------------------------------------------------------------------------------------
     // Function connected to the timeout() signal of targetNextForegroundWindowTimer, checks if the current
     // foreground window differs from the program's, and stores its title and cancels the timer if it does.
@@ -134,7 +134,7 @@ private:
     QTimer* targetNextForegroundWindowTimer;
     // ----------------------------------------------------------------------------------------------------
 
-// Virtual Function Implementations
+    // Virtual Function Implementations
     // ----------------------------------------------------------------------------------------------------
     // Override of QMainWindow's closeEvent, to ensure the cursor doesn't remain caged when the window closes.
     void closeEvent(QCloseEvent*);
