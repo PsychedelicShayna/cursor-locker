@@ -212,45 +212,6 @@ void MainWindow::activateIfForegroundWindowMatchesTarget() {
     }
 }
 
-void MainWindow::targetNextForegroundWindow() {
-    static uint32_t attempt_counter = 0;
-
-    const auto& reset_timer_lambda = [&]() -> void {
-        targetNextForegroundWindowTimer->stop();
-        ui->lin_activation_parameter->clear();
-        ui->btn_edit_activation_parameter->setEnabled(true);
-        attempt_counter = 0;
-
-        logToConsole("Called reset_timer_lambda()", CLOG_INFO);
-    };
-
-    if(++attempt_counter > 15) {
-        reset_timer_lambda();
-        logToConsole("reset_timer_lambda() Called because of attempt counter overflow.", CLOG_INFO);
-        return;
-    } else {
-        ui->lin_activation_parameter->setText("Switch to target window within timeframe (" + QString::number(attempt_counter) + " / 15 attempts)");
-        beepBoop({{200, 20}});
-    }
-
-    HWND foreground_window = GetForegroundWindow();
-
-    if(foreground_window != HWND(winId())) {
-        reset_timer_lambda();
-        logToConsole("reset_timer_lambda() Called because foreground != HWND(winId()).", CLOG_INFO);
-
-        char window_title_buffer[256];
-        std::fill(window_title_buffer, window_title_buffer + sizeof(window_title_buffer), 0x00);
-        size_t length = GetWindowText(foreground_window, window_title_buffer, sizeof(window_title_buffer));
-        logToConsole({"GetWindowText filled window_title_buffer with ", QString::number(length), " / 256 bytes"}, CLOG_INFO);
-
-        targetForegroundWindowTitle = QString(window_title_buffer);
-        ui->lin_activation_parameter->setText(targetForegroundWindowTitle);
-
-        beepBoop({{900, 20}, {900, 20}});
-    }
-}
-
 void MainWindow::closeEvent(QCloseEvent*) {
     logToConsole("closeEvent impl called", CLOG_INFO);
     disableCursorLock();
@@ -405,11 +366,60 @@ void MainWindow::editActivationMethodParameter() {
 }
 
 void MainWindow::startForegroundWindowGrabber() {
-    if(selectedActivationMethod == MONITOR_FOR::WINDOW_TITLE) {
-        if(ui->btn_edit_activation_parameter->text() == "Edit" && ui->btn_edit_activation_parameter->isEnabled()) {
-            ui->btn_edit_activation_parameter->setEnabled(false);
-            targetNextForegroundWindowTimer->start(500);
-        }
+    static QTimer* grab_window_timer = nullptr;
+
+    if(grab_window_timer == nullptr) {
+        grab_window_timer = new QTimer(this);
+
+        connect(grab_window_timer, &QTimer::timeout,
+                [this]() -> void {
+                    static const uint32_t max_timeouts = 15;
+                    static uint32_t timeout_counter = 0;
+
+                    const auto& reset_window_grabber = [&]() -> void {
+                        grab_window_timer->stop();
+                        timeout_counter = 0;
+                        ui->lin_activation_parameter->clear();
+                        ui->btn_edit_activation_parameter->setEnabled(true);
+                    };
+
+                    if(++timeout_counter > max_timeouts) {
+                        reset_window_grabber();
+                    } else {
+                        beepBoop({{200, 20}});
+
+                        ui->lin_activation_parameter->setText(
+                            "Switch to target window within timeframe: "
+                            + QString::number(timeout_counter)
+                            + " / "
+                            + QString::number(max_timeouts)
+                        );
+
+                        HWND foreground_window = GetForegroundWindow();
+
+                        // Other window has been selected, as foreground_window doesn't match this program's window.
+                        if(foreground_window != HWND(winId())) {
+                            beepBoop({{900, 20}, {900, 20}});
+                            reset_window_grabber();
+
+                            char window_title[256];
+                            std::fill(window_title, window_title + sizeof(window_title), 0x00);
+                            size_t bytes_written = GetWindowText(foreground_window, window_title, sizeof(window_title));
+                            logToConsole({"GetWindowText() wrote ", QString::number(bytes_written), " bytes to char window_title[256]"});
+
+                            targetForegroundWindowTitle = QString(window_title);
+                            ui->lin_activation_parameter->setText(targetForegroundWindowTitle);
+                        }
+                    }
+                });
+    }
+
+    if(selectedActivationMethod == MONITOR_FOR::WINDOW_TITLE
+            && ui->btn_edit_activation_parameter->text() == "Edit"
+            && ui->btn_edit_activation_parameter->isEnabled()
+            ) {
+        ui->btn_edit_activation_parameter->setEnabled(false);
+        grab_window_timer->start(500);
     }
 }
 
@@ -493,12 +503,9 @@ MainWindow::MainWindow(QWidget* parent)
     targetHotkeyVkid = 0;
 
     checkActivationMethodTimer = new QTimer(this);
-    targetNextForegroundWindowTimer = new QTimer(this);
 
     // Event Connections
     // --------------------------------------------------
-    connect(targetNextForegroundWindowTimer, &QTimer::timeout, this, &MainWindow::targetNextForegroundWindow);
-
     // Class SLOT() connections.
     connect(ui->cbx_activation_method, SIGNAL(currentIndexChanged(int)), this, SLOT(changeActivationMethod(int)));
     connect(ui->btn_edit_activation_parameter, SIGNAL(clicked()), this, SLOT(editActivationMethodParameter()));

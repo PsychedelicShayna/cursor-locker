@@ -122,19 +122,6 @@ private:
     QTimer* checkActivationMethodTimer;
     // ----------------------------------------------------------------------------------------------------
 
-    // Foreground Window Grabber (edit button right-click)
-    // ----------------------------------------------------------------------------------------------------
-    // Function connected to the timeout() signal of targetNextForegroundWindowTimer, checks if the current
-    // foreground window differs from the program's, and stores its title and cancels the timer if it does.
-    // Uses a static variable to track the amount of attempts, and cancels the timer automatically if it
-    // exceeds a certain value.
-    void targetNextForegroundWindow();
-
-    // Timer that when started, periodically calls targetNextForegroundWindow. Triggered by right clicking
-    // the edit button.
-    QTimer* targetNextForegroundWindowTimer;
-    // ----------------------------------------------------------------------------------------------------
-
     // Virtual Function Implementations
     // ----------------------------------------------------------------------------------------------------
     // Override of QMainWindow's closeEvent, to ensure the cursor doesn't remain caged when the window closes.
@@ -157,8 +144,14 @@ private slots:
     // Connected in constructor to btn_edit_activation_parameter's clicked() signal.
     void editActivationMethodParameter();
 
-    // Connected to btn_edit_activation_parameter's right click event filter defined in constructor.
-    void startForegroundWindowGrabber();
+    /* Starts the foreground window grabber, which performs a maximum of 15 checks spaced 500ms apart, to see if the current foreground window,
+     * as returned by WinAPI, differs from the program's foreground window, indicating that another window was selected. If another window has
+     * been selected, then the timer performing these checks is reset, and the target foreground window is set to the selected foreground window.
+     * Equally, if the foreground window stays the same after 15 checks have been performed, the timer is also reset, and no changes are made.
+     * This function only works if the current activation method is set to Window title, otherwise any call made to it will be ignored.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    void startForegroundWindowGrabber(); //////
+    // - - - - - - - - - - - - - - - - - - ///
 
     // Connected in constructor to btn_mutebeepboop's clicked() signal.
     void toggleMuteBeepBoop();
