@@ -8,6 +8,7 @@
 #include <QScrollBar>
 #include <QTimer>
 #include <QMenu>
+#include <QPair>
 
 #include <Windows.h>
 #include <TlHelp32.h>

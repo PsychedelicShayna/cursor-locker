@@ -72,7 +72,7 @@ void MainWindow::logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LE
 
     concatenated_messages += '\n';
 
-    logMessages.append(QPair(loglevel, concatenated_messages));
+    logMessages.append(QPair<CONSOLE_LOG_LEVELS, QString>  {loglevel, concatenated_messages});
     displayLogMessagesInConsole();
 }
 
