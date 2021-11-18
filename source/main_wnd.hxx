@@ -96,11 +96,6 @@ private:
     // Stores the window title that should be used by activateIfForegroundWindowMatchesTarget.
     QString targetForegroundWindowTitle;
 
-    // Virtual Function Implementations
-    // ----------------------------------------------------------------------------------------------------
-    // Override of QMainWindow's closeEvent, to ensure the cursor doesn't remain caged when the window closes.
-    void closeEvent(QCloseEvent*);
-
     // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
     // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.
     bool nativeEvent(const QByteArray& event_type, void* message, long* result);
@@ -109,12 +104,12 @@ private:
 signals:
     // Signal emitted by nativeEvent when it receives a registered hotkey pressed native event, and
     // the hotkey's ID (wParam) matches targetHotkeyId.
-    void targetHotkeyVkidPressedSignal();
+    void targetHotkeyWasPressed();
 
 private slots:
     // The WinAPI hotkey press event is captured by the nativeEvent() virtual function implementation,
     // and is then re-emitted as a Qt signal which is connected to this function/slot.
-    void targetHotkeyVkidPressedSlot();
+    void activateBecauseTargetHotkeyWasPressed();
     // ----------------------------------------------------------------------------------------------------
 
     // Function that checks whether or not targetProcessImageName is currently running, and activates or

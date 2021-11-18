@@ -15,7 +15,7 @@ bool MainWindow::loadStylesheetFile(const std::string& file_path) {
         std::string style_sheet((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
         input_stream.close();
 
-        logToConsole({"Read ", QString::number(style_sheet.size()), " bytes from stylesheet @ ", QString::fromStdString(file_path)}, CLOG_INFO);
+        logToConsole({"Read ", QString::number(style_sheet.size()), " bytes from stylesheet @ ", QString::fromStdString(file_path)});
 
         setStyleSheet(QString::fromStdString(style_sheet));
         return true;
@@ -33,14 +33,14 @@ void MainWindow::beepBoop(QList<QPair<int, int>> freqdur_list) {
 }
 
 void MainWindow::displayLogMessagesInConsole(bool just_add_latest) {
-    auto l_print_message_pair = [this](const QPair<CONSOLE_LOG_LEVELS, QString>& pair) -> void {
+    auto print_console_message_qpair = [this](const QPair<CONSOLE_LOG_LEVELS, QString>& pair) -> void {
         if(minimumLogLevel > pair.first) return;
 
         ui->txt_console->moveCursor(QTextCursor::End);
 
         static const QMap<CONSOLE_LOG_LEVELS, QString>& loglevel_resolver {
-            {CLOG_INFO, "[INFO] "}, {CLOG_WARNING, "[WARNING] "},
-            {CLOG_ERROR, "[ERROR] "}, {CLOG_EXCEPTION, "[EXCEPTION] "}
+            {LL_INFO, "[INFO] "}, {LL_WARNING, "[WARNING] "},
+            {LL_ERROR, "[ERROR] "}, {LL_EXCEPTION, "[EXCEPTION] "}
         };
 
         const QString& loglevel_str = loglevel_resolver.contains(pair.first)
@@ -52,11 +52,11 @@ void MainWindow::displayLogMessagesInConsole(bool just_add_latest) {
 
     if(just_add_latest) {
         const auto& latest_pair = logMessages.last();
-        l_print_message_pair(latest_pair);
+        print_console_message_qpair(latest_pair);
     } else {
         ui->txt_console->clear();
         for(const auto& pair : logMessages) {
-            l_print_message_pair(pair);
+            print_console_message_qpair(pair);
         }
     }
 
@@ -112,7 +112,7 @@ bool MainWindow::toggleCursorLock() {
 
 bool MainWindow::registerTargetHotkey() {
     bool result = RegisterHotKey(HWND(winId()), targetHotkeyId, MOD_NOREPEAT, targetHotkeyVkid);
-    logToConsole({"RegisterHotKey(HWND(winId), 0x", QString::number(targetHotkeyId, 16), ", MOD_NOREPEAT, 0x", QString::number(targetHotkeyVkid, 16), ") returned ", result ? "true" : "false"}, CLOG_INFO);
+    logToConsole({"RegisterHotKey(HWND(winId), 0x", QString::number(targetHotkeyId, 16), ", MOD_NOREPEAT, 0x", QString::number(targetHotkeyVkid, 16), ") returned ", result ? "true" : "false"});
     return result;
 }
 
@@ -120,15 +120,10 @@ bool MainWindow::unregisterTargetHotkey() {
     bool result = UnregisterHotKey(HWND(winId()), targetHotkeyId);
 
     if(result) {
-        logToConsole({"UnregisterHotKey(HWND(winId), 0x", QString::number(targetHotkeyId, 16), ") returned true"}, CLOG_INFO);
+        logToConsole({"UnregisterHotKey(HWND(winId), 0x", QString::number(targetHotkeyId, 16), ") returned true"});
     }
 
     return result;
-}
-
-void MainWindow::closeEvent(QCloseEvent*) {
-    logToConsole("closeEvent impl called", CLOG_INFO);
-    disableCursorLock();
 }
 
 bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* result) {
@@ -137,33 +132,49 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* 
 
     MSG* msg = reinterpret_cast<MSG*>(message);
 
-    if (msg->message == WM_HOTKEY) {
-        logToConsole({"nativeEvent got MSG WM_HOTKEY, wParam=0x", QString::number(msg->wParam, 16), ", lParam=0x", QString::number(msg->lParam, 16)}, CLOG_INFO);
+    /* msg->lParam Is a 64-bit integer and stores the VKID of the pressed hotkey in byte 3/8 (little-endian)
+     * and so it cannot be directly compared with targetHotkeyVkid, as it stores the VKID in byte 1/1 so the
+     * comparison will always fail. Instead, lParam should be bitshifted 16 bits to the right so that the VKID
+     * is located in byte 1/8, and then bitwise AND with 0xFF should be performed to exclude any other bits that
+     * may be present in the 64-bit integer, and leave only the bits in position 1/8 which should be the VKID.
+     * After this is done, it may be compared as normal without issue.
+     *
+     *                                                  lParam >> 16
+     * ????     ????     ????     ????     ????     |--VKID-----------v
+     * 00000000 00000000 00000000 00000000 00000000 01101010 00000000 00000000
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-        if(msg->wParam == static_cast<uint64_t>(targetHotkeyId)) {
-            emit targetHotkeyVkidPressedSignal();
+    if (msg->message == WM_HOTKEY) {
+        if(msg->wParam == targetHotkeyId && ((msg->lParam >> 16) & 0xFF) == targetHotkeyVkid) {
+            emit targetHotkeyWasPressed();
             return true;
         }
+
+        logToConsole({"nativeEvent got MSG WM_HOTKEY, wParam=0x",
+                      QString::number(msg->wParam, 16),
+                      ", lParam=0x",
+                      QString::number(msg->lParam, 16)
+                     });
     }
 
     return QMainWindow::nativeEvent(event_type, message, result);
 }
 
-void MainWindow::targetHotkeyVkidPressedSlot() {
+void MainWindow::activateBecauseTargetHotkeyWasPressed() {
     if(toggleCursorLock()) {
-        logToConsole("Activated cursor lock via hotkey.", CLOG_INFO);
+        logToConsole("Activated cursor lock via hotkey.");
         beepBoop({{500,20}, {700, 20}});
     } else {
-        logToConsole("Deactivated cursor lock via hotkey.", CLOG_INFO);
+        logToConsole("Deactivated cursor lock via hotkey.");
         beepBoop({{700,20}, {500, 20}});
     }
 }
 
-void MainWindow::activateIfTargetImagePresent() {
+void MainWindow::activateIfTargetProcessRunning() {
     HANDLE process_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0);
 
     if(process_snapshot == INVALID_HANDLE_VALUE) {
-        logToConsole("Invalid handle value for snapshot of type TH32CS_SNAPPROCESS. Cannot see running tasks!", CLOG_ERROR);
+        logToConsole("Invalid handle value for snapshot of type TH32CS_SNAPPROCESS. Cannot see running tasks!", LL_ERROR);
         return;
     }
 
@@ -185,7 +196,7 @@ void MainWindow::activateIfTargetImagePresent() {
             enableCursorLock();
 
             if(first_find) {
-                logToConsole({"Found target process: ", targetProcessImageName}, CLOG_INFO);
+                logToConsole({"Enabling lock because target process was found: ", targetProcessImageName});
                 first_find = false;
 
                 beepBoop({{500,20}, {700,20}});
@@ -194,7 +205,7 @@ void MainWindow::activateIfTargetImagePresent() {
             disableCursorLock();
 
             if(!first_find) {
-                logToConsole({"Lost target process: ", targetProcessImageName}, CLOG_INFO);
+                logToConsole({"Disabling lock because target process was lost: ", targetProcessImageName});
                 first_find = true;
 
                 beepBoop({{700,20}, {500,20}});
@@ -218,7 +229,7 @@ void MainWindow::activateIfForegroundWindowMatchesTarget() {
         enableCursorLock();
 
         if(first_find) {
-            logToConsole({"Found target window: ", targetForegroundWindowTitle});
+            logToConsole({"Enabling lock because target window was found: ", targetForegroundWindowTitle});
             first_find = false;
 
             beepBoop({{500,20}, {700,20}});
@@ -227,7 +238,7 @@ void MainWindow::activateIfForegroundWindowMatchesTarget() {
         disableCursorLock();
 
         if(!first_find) {
-            logToConsole({"Lost target window: ", targetForegroundWindowTitle});
+            logToConsole({"Disabling lock because target window was lost: ", targetForegroundWindowTitle});
             first_find = true;
 
             beepBoop({{700,20}, {500,20}});
@@ -261,7 +272,7 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
 
     // Ensure that hotkeys are unregistered, and the hotkey pressed signal is disconnected from the slot.
-    disconnect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
+    disconnect(this, &MainWindow::targetHotkeyWasPressed, this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
     unregisterTargetHotkey();
 
     /* Clear lin_activation_parameter's text to allow the placeholder text of
@@ -276,7 +287,7 @@ void MainWindow::changeActivationMethod(int method_index) {
 
     switch(method_index) {
     case 0 : {
-        logToConsole("Activation method set to nothing.", CLOG_INFO);
+        logToConsole("Activation method set to nothing.");
 
         selectedActivationMethod = ACTIVATION_METHOD::NOTHING;
         ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
@@ -284,11 +295,11 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
 
     case 1 : {
-        logToConsole("Activation mode set to VKID keybind.", CLOG_INFO);
-        logToConsole("VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html", CLOG_INFO);
+        logToConsole("Activation mode set to VKID keybind.");
+        logToConsole("VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html");
 
         selectedActivationMethod = ACTIVATION_METHOD::KEYBIND;
-        connect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
+        connect(this, &MainWindow::targetHotkeyWasPressed, this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
         registerTargetHotkey();
 
         ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
@@ -304,10 +315,10 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
 
     case 2 : {
-        logToConsole("Activation mode set to process image.", CLOG_INFO);
+        logToConsole("Activation mode set to process image.");
 
         selectedActivationMethod = ACTIVATION_METHOD::PROCESS_IMAGE;
-        timed_activation_method_mfptr = &MainWindow::activateIfTargetImagePresent;
+        timed_activation_method_mfptr = &MainWindow::activateIfTargetProcessRunning;
         ui->lin_activation_parameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
 
         if(targetProcessImageName.size()) {
@@ -318,7 +329,7 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
 
     case 3 : {
-        logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.", CLOG_INFO);
+        logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.");
 
         selectedActivationMethod = ACTIVATION_METHOD::WINDOW_TITLE;
         timed_activation_method_mfptr = &MainWindow::activateIfForegroundWindowMatchesTarget;
@@ -361,7 +372,7 @@ void MainWindow::editActivationMethodParameter() {
                     targetHotkeyVkid = vkid;
                     registerTargetHotkey();
                 } else {
-                    logToConsole({"Invalid hexadecimal value '", vkid_str, "' for activation method parameter."}, CLOG_WARNING);
+                    logToConsole({"Invalid hexadecimal value '", vkid_str, "' for activation method parameter."}, LL_WARNING);
                     ui->lin_activation_parameter->clear();
                 }
             }
@@ -496,7 +507,7 @@ MainWindow::MainWindow(QWidget* parent)
     :
       QMainWindow(parent),
       ui(new Ui::MainWindow),
-      minimumLogLevel(CLOG_INFO),
+      minimumLogLevel(LL_INFO),
       targetHotkeyId(420)
 {
     ui->setupUi(this);
@@ -547,14 +558,14 @@ MainWindow::MainWindow(QWidget* parent)
 
         try {
             default_values = Json::parse(raw_json_string);
-            logToConsole("(defaults.json) Default values from defaults.json have been parsed.", CLOG_INFO);
+            logToConsole("(defaults.json) Default values from defaults.json have been parsed.");
         } catch(const Json::exception& e) {
-            logToConsole("(defaults.json) Could not parse values from defaults.json, the file might be incorrectly formatted.", CLOG_ERROR);
-            logToConsole({"(defaults.json) Json::exception::what -- ", e.what()}, CLOG_EXCEPTION);
+            logToConsole("(defaults.json) Could not parse values from defaults.json, the file might be incorrectly formatted.", LL_ERROR);
+            logToConsole({"(defaults.json) Json::exception::what -- ", e.what()}, LL_EXCEPTION);
             QMessageBox::critical(this, "JSON Exception", "Error when parsing defaults.json, the file might be incorrectly formatted.");
         } catch(const std::exception& e) {
-            logToConsole("(defaults.json) Non-JSON exception thrown when parsing values from defaults.json", CLOG_ERROR);
-            logToConsole({"(defaults.json) std::exception::what -- ", e.what()}, CLOG_EXCEPTION);
+            logToConsole("(defaults.json) Non-JSON exception thrown when parsing values from defaults.json", LL_ERROR);
+            logToConsole({"(defaults.json) std::exception::what -- ", e.what()}, LL_EXCEPTION);
             QMessageBox::critical(this, "Unknown Exception", "Error when parsing defaults.json, the file might be incorrectly formatted, but the exception isn't a JSON exception.");
         }
 
@@ -565,9 +576,9 @@ MainWindow::MainWindow(QWidget* parent)
                     uint8_t vkid = static_cast<uint8_t>(strtol(vkid_hex_string.c_str(), nullptr, 16));
                     targetHotkeyVkid = vkid;
 
-                    logToConsole({"(defaults.json) Loaded activation hotkey VKID \"0x", QString::number(targetHotkeyVkid, 16), "\""}, CLOG_INFO);
+                    logToConsole({"(defaults.json) Loaded activation hotkey VKID \"0x", QString::number(targetHotkeyVkid, 16), "\""});
                 } else {
-                    logToConsole("(defaults.json) Invalid value type for \"vkid\" key, should be a string.", CLOG_WARNING);
+                    logToConsole("(defaults.json) Invalid value type for \"vkid\" key, should be a string.", LL_WARNING);
                     QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"vkid\" key in defaults.json is not a string! Ignoring its value.");
                 }
             }
@@ -575,9 +586,9 @@ MainWindow::MainWindow(QWidget* parent)
             if(default_values.contains("image")) {
                 if(default_values["image"].is_string() && default_values["image"] != "") {
                     targetProcessImageName = QString::fromStdString(default_values["image"].get<std::string>());
-                    logToConsole({"(defaults.json) Loaded process image name \"", targetProcessImageName, "\""}, CLOG_INFO);
+                    logToConsole({"(defaults.json) Loaded process image name \"", targetProcessImageName, "\""});
                 } else if(!default_values["image"].is_string()) {
-                    logToConsole("(defaults.json) Invalid value type for \"image\" key, should be a string.", CLOG_WARNING);
+                    logToConsole("(defaults.json) Invalid value type for \"image\" key, should be a string.", LL_WARNING);
                     QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"image\" key in defaults.json is not a string! Ignoring its value.");
                 }
             }
@@ -585,9 +596,9 @@ MainWindow::MainWindow(QWidget* parent)
             if(default_values.contains("title")) {
                 if(default_values["title"].is_string() && default_values["title"] != "") {
                     targetForegroundWindowTitle = QString::fromStdString(default_values["title"].get<std::string>());
-                    logToConsole({"(defaults.json) Loaded foreground window title \"", targetForegroundWindowTitle, "\""}, CLOG_INFO);
+                    logToConsole({"(defaults.json) Loaded foreground window title \"", targetForegroundWindowTitle, "\""});
                 } else if(!default_values["title"].is_string()) {
-                    logToConsole("(defaults.json) Invalid value type for \"title\" key, should be a string.", CLOG_WARNING);
+                    logToConsole("(defaults.json) Invalid value type for \"title\" key, should be a string.", LL_WARNING);
                     QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"title\" key in defaults.json is not a string! Ignoring its value.");
                 }
             }
@@ -599,13 +610,13 @@ MainWindow::MainWindow(QWidget* parent)
 
                     if(method_resolver.contains(method_string)) {
                         ui->cbx_activation_method->setCurrentIndex(method_resolver[method_string].get<uint8_t>());
-                        logToConsole({"(defaults.json) Loaded default activation method \"", QString::fromStdString(method_string), "\""}, CLOG_INFO);
+                        logToConsole({"(defaults.json) Loaded default activation method \"", QString::fromStdString(method_string), "\""});
                     } else {
-                        logToConsole({"(defaults.json) Invalid activation method \"", QString::fromStdString(method_string), "\" for \"method\" key."}, CLOG_WARNING);
+                        logToConsole({"(defaults.json) Invalid activation method \"", QString::fromStdString(method_string), "\" for \"method\" key."}, LL_WARNING);
                         QMessageBox::warning(this, "Invalid Activation Method", "Invalid activation method configured in defaults.json, \"" + QString::fromStdString(method_string) + "\" - leave blank to disable, or pick from: vkid, title, window");
                     }
                 } else if(!default_values["method"].is_string()) {
-                    logToConsole("(defaults.json) Invalid value type for \"method\" key, should be a string.", CLOG_WARNING);
+                    logToConsole("(defaults.json) Invalid value type for \"method\" key, should be a string.", LL_WARNING);
                     QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"method\" key in defaults.json is not a string! Ignoring its value.");
                 }
             }
@@ -615,9 +626,9 @@ MainWindow::MainWindow(QWidget* parent)
                     const bool& muted_value = default_values["muted"].get<bool>();
                     muteBeepBoop = muted_value;
                     ui->btn_mutebeepboop->setText("Unmute");
-                    logToConsole("(defaults.json) Loaded default mute state.", CLOG_INFO);
+                    logToConsole("(defaults.json) Loaded default mute state.");
                 } else {
-                    logToConsole("(defaults.json) Invalid value type for \"muted\" key, should be a boolean.", CLOG_WARNING);
+                    logToConsole("(defaults.json) Invalid value type for \"muted\" key, should be a boolean.", LL_WARNING);
                     QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"muted\" key in defaults.json is not a boolean value! Must be true or false, without quotes.");
                 }
             }
@@ -639,19 +650,19 @@ MainWindow::MainWindow(QWidget* parent)
             output_stream.write(dumped_json.data(), dumped_json.size());
             output_stream.close();
 
-            logToConsole("(defaults.json) Generated new defaults.json file using blank template.", CLOG_INFO);
+            logToConsole("(defaults.json) Generated new defaults.json file using blank template.");
             QMessageBox::information(this, "Generated defaults.json", "The defaults.json file has been generated, if you wish to store default program values, please fill it in.");
         } else {
-            logToConsole("(defaults.json) Bad ofstream when attempting to generate a new defaults.json file! Most likely a permission error.", CLOG_ERROR);
+            logToConsole("(defaults.json) Bad ofstream when attempting to generate a new defaults.json file! Most likely a permission error.", LL_ERROR);
             QMessageBox::critical(this, "Bad Stream", "Attempted to create a defaults.json file, but the stream was bad. Are you sure this program has permission to write to the current directory?");
         }
     }
 
 
     if(loadStylesheetFile("./style_sheet.qss")) {
-        logToConsole("Loaded QSS stylesheet ./style_sheet.qss - theme has been applied.", CLOG_INFO);
+        logToConsole("Loaded QSS stylesheet ./style_sheet.qss - theme has been applied.");
     } else {
-        logToConsole("Cannot open style_sheet.qss, using default Windows style.", CLOG_WARNING);
+        logToConsole("Cannot open style_sheet.qss, using default Windows style.", LL_WARNING);
     }
 
     // Install Custom Event Filter For Right Clicks
@@ -678,5 +689,6 @@ MainWindow::MainWindow(QWidget* parent)
 }
 
 MainWindow::~MainWindow() {
+    disableCursorLock();
     delete ui;
 }
