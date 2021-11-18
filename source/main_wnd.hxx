@@ -27,7 +27,7 @@ using Json = nlohmann::json;
 enum struct ACTIVATION_METHOD;
 
 enum CONSOLE_LOG_LEVELS {
-    CLOG_INFO = 0, CLOG_WARNING = 1, CLOG_ERROR = 2, CLOG_EXCEPTION = 3
+    LL_INFO = 0, LL_WARNING = 1, LL_ERROR = 2, LL_EXCEPTION = 3
 };
 
 class MainWindow : public QMainWindow {
@@ -56,8 +56,8 @@ private:
     void displayLogMessagesInConsole(bool just_add_latest=true);
 
     // Functions to simplify logging messages to the UI's debug console.
-    void logToConsole(const QList<QString>&, CONSOLE_LOG_LEVELS loglevel = CLOG_INFO);
-    void logToConsole(const char*, CONSOLE_LOG_LEVELS loglevel = CLOG_INFO);
+    void logToConsole(const QList<QString>&, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
+    void logToConsole(const char*, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
 
     // Return the RECT of the current foreground window.
     RECT getForegroundWindowRect();
@@ -115,7 +115,7 @@ private slots:
     // Function that checks whether or not targetProcessImageName is currently running, and activates or
     // deactivates the cursor lock accordingly. Connected to checkActivationMethodTimer's timeout() signal
     // when actively selected as an activation method.
-    void activateIfTargetImagePresent();
+    void activateIfTargetProcessRunning();
     // ----------------------------------------------------------------------------------------------------
 
     // Function that checks if the current foreground window's title matches the title stored inside of
