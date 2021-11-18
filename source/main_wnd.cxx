@@ -1,7 +1,7 @@
 #include "main_wnd.hxx"
 #include "ui_main_wnd.h"
 
-enum struct MONITOR_FOR {
+enum struct ACTIVATION_METHOD {
     NOTHING         =   0b00000000,
     KEYBIND         =   0b00000001,
     PROCESS_IMAGE   =   0b00000010,
@@ -126,6 +126,29 @@ bool MainWindow::unregisterTargetHotkey() {
     return result;
 }
 
+void MainWindow::closeEvent(QCloseEvent*) {
+    logToConsole("closeEvent impl called", CLOG_INFO);
+    disableCursorLock();
+}
+
+bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* result) {
+    Q_UNUSED(event_type);
+    Q_UNUSED(result);
+
+    MSG* msg = reinterpret_cast<MSG*>(message);
+
+    if (msg->message == WM_HOTKEY) {
+        logToConsole({"nativeEvent got MSG WM_HOTKEY, wParam=0x", QString::number(msg->wParam, 16), ", lParam=0x", QString::number(msg->lParam, 16)}, CLOG_INFO);
+
+        if(msg->wParam == static_cast<uint64_t>(targetHotkeyId)) {
+            emit targetHotkeyVkidPressedSignal();
+            return true;
+        }
+    }
+
+    return QMainWindow::nativeEvent(event_type, message, result);
+}
+
 void MainWindow::targetHotkeyVkidPressedSlot() {
     if(toggleCursorLock()) {
         logToConsole("Activated cursor lock via hotkey.", CLOG_INFO);
@@ -212,49 +235,50 @@ void MainWindow::activateIfForegroundWindowMatchesTarget() {
     }
 }
 
-void MainWindow::closeEvent(QCloseEvent*) {
-    logToConsole("closeEvent impl called", CLOG_INFO);
-    disableCursorLock();
-}
+void MainWindow::changeActivationMethod(int method_index) {
+    /* For activation methods that require a timer (window title & image name), the below timer
+     * will be used to call the member function associated with the activation method, whose address
+     * will be stored in the below member function pointer. The address is stored because when switching
+     * to a new activation method, the timeout signal has to be disconnected from the old member function.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    static QTimer* timed_activation_method_timer = nullptr;
+    static void(MainWindow::*timed_activation_method_mfptr)() = nullptr;
 
-bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* result) {
-    Q_UNUSED(event_type);
-    Q_UNUSED(result);
-
-    MSG* msg = reinterpret_cast<MSG*>(message);
-
-    if (msg->message == WM_HOTKEY) {
-        logToConsole({"nativeEvent got MSG WM_HOTKEY, wParam=0x", QString::number(msg->wParam, 16), ", lParam=0x", QString::number(msg->lParam, 16)}, CLOG_INFO);
-
-        if(msg->wParam == static_cast<uint64_t>(targetHotkeyId)) {
-            emit targetHotkeyVkidPressedSignal();
-            return true;
-        }
+    // One-time allocation for static timed_activation_method_timer
+    if(timed_activation_method_timer == nullptr) {
+        timed_activation_method_timer = new QTimer(this);
     }
 
-    return QMainWindow::nativeEvent(event_type, message, result);
-}
+    /* Disconnect the timeout signal from the member function associated with the activation method, to
+     * ensure that the timer doesn't keep executing the old activation method after it has been connected
+     * to a new activation method member function. Also ensure the timer is stopped, and reset the member
+     * function pointer to nullptr so this block doesn't run again in case no activation method is selected.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    if(timed_activation_method_mfptr != nullptr) {
+        disconnect(timed_activation_method_timer, &QTimer::timeout, this, timed_activation_method_mfptr);
+        timed_activation_method_mfptr = nullptr;
+        timed_activation_method_timer->stop();
+    }
 
-void MainWindow::changeActivationMethod(int method_index) {
+    // Ensure that hotkeys are unregistered, and the hotkey pressed signal is disconnected from the slot.
     disconnect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
     unregisterTargetHotkey();
 
-    if(selectedActivationMethodFunction != nullptr) {
-        disconnect(checkActivationMethodTimer, &QTimer::timeout, this, selectedActivationMethodFunction);
-        selectedActivationMethodFunction = nullptr;
-        checkActivationMethodTimer->stop();
-    }
-
+    /* Clear lin_activation_parameter's text to allow the placeholder text of
+     * the selected activation method to be displayed later on.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     ui->lin_activation_parameter->clear();
+
+    // Ensure the cursor lock is disabled before switching over to a new activation method.
     disableCursorLock();
 
-    logToConsole("--------------------------------------------------", CLOG_INFO);
+    logToConsole("--------------------------------------------------");
 
     switch(method_index) {
     case 0 : {
         logToConsole("Activation method set to nothing.", CLOG_INFO);
 
-        selectedActivationMethod = MONITOR_FOR::NOTHING;
+        selectedActivationMethod = ACTIVATION_METHOD::NOTHING;
         ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
         break;
     }
@@ -263,7 +287,7 @@ void MainWindow::changeActivationMethod(int method_index) {
         logToConsole("Activation mode set to VKID keybind.", CLOG_INFO);
         logToConsole("VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html", CLOG_INFO);
 
-        selectedActivationMethod = MONITOR_FOR::KEYBIND;
+        selectedActivationMethod = ACTIVATION_METHOD::KEYBIND;
         connect(this, &MainWindow::targetHotkeyVkidPressedSignal, this, &MainWindow::targetHotkeyVkidPressedSlot);
         registerTargetHotkey();
 
@@ -282,8 +306,8 @@ void MainWindow::changeActivationMethod(int method_index) {
     case 2 : {
         logToConsole("Activation mode set to process image.", CLOG_INFO);
 
-        selectedActivationMethod = MONITOR_FOR::PROCESS_IMAGE;
-        selectedActivationMethodFunction = &MainWindow::activateIfTargetImagePresent;
+        selectedActivationMethod = ACTIVATION_METHOD::PROCESS_IMAGE;
+        timed_activation_method_mfptr = &MainWindow::activateIfTargetImagePresent;
         ui->lin_activation_parameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
 
         if(targetProcessImageName.size()) {
@@ -296,8 +320,8 @@ void MainWindow::changeActivationMethod(int method_index) {
     case 3 : {
         logToConsole("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.", CLOG_INFO);
 
-        selectedActivationMethod = MONITOR_FOR::WINDOW_TITLE;
-        selectedActivationMethodFunction = &MainWindow::activateIfForegroundWindowMatchesTarget;
+        selectedActivationMethod = ACTIVATION_METHOD::WINDOW_TITLE;
+        timed_activation_method_mfptr = &MainWindow::activateIfForegroundWindowMatchesTarget;
         ui->lin_activation_parameter->setPlaceholderText("Window title, e.g. Skyrim, Skyrim Special Edition");
 
         if(targetForegroundWindowTitle.size()) {
@@ -308,19 +332,19 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
     }
 
-    if(selectedActivationMethodFunction != nullptr) {
-        connect(checkActivationMethodTimer, &QTimer::timeout, this, selectedActivationMethodFunction);
-        checkActivationMethodTimer->start(500);
+    if(timed_activation_method_mfptr != nullptr) {
+        connect(timed_activation_method_timer, &QTimer::timeout, this, timed_activation_method_mfptr);
+        timed_activation_method_timer->start(500);
     }
 }
 
 void MainWindow::editActivationMethodParameter() {
-    if(ui->btn_edit_activation_parameter->text() == "Edit" && selectedActivationMethod != MONITOR_FOR::NOTHING) {
+    if(ui->btn_edit_activation_parameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
         ui->lin_activation_parameter->setEnabled(true);
         ui->btn_edit_activation_parameter->setText("Confirm");
     } else if(ui->btn_edit_activation_parameter->text() == "Confirm") {
         switch(selectedActivationMethod) {
-        case MONITOR_FOR::KEYBIND : {
+        case ACTIVATION_METHOD::KEYBIND : {
             unregisterTargetHotkey();
 
             QString vkid_str = ui->lin_activation_parameter->text();
@@ -345,17 +369,17 @@ void MainWindow::editActivationMethodParameter() {
             break;
         }
 
-        case MONITOR_FOR::PROCESS_IMAGE : {
+        case ACTIVATION_METHOD::PROCESS_IMAGE : {
             targetProcessImageName = ui->lin_activation_parameter->text();
             break;
         }
 
-        case MONITOR_FOR::WINDOW_TITLE : {
+        case ACTIVATION_METHOD::WINDOW_TITLE : {
             targetForegroundWindowTitle = ui->lin_activation_parameter->text();
             break;
         }
 
-        case MONITOR_FOR::NOTHING : {
+        case ACTIVATION_METHOD::NOTHING : {
             break;
         }
         }
@@ -414,7 +438,7 @@ void MainWindow::startForegroundWindowGrabber() {
                 });
     }
 
-    if(selectedActivationMethod == MONITOR_FOR::WINDOW_TITLE
+    if(selectedActivationMethod == ACTIVATION_METHOD::WINDOW_TITLE
             && ui->btn_edit_activation_parameter->text() == "Edit"
             && ui->btn_edit_activation_parameter->isEnabled()
             ) {
@@ -499,10 +523,8 @@ MainWindow::MainWindow(QWidget* parent)
     // Member Variable Initialization
     // --------------------------------------------------
     muteBeepBoop = false;
-    selectedActivationMethod = MONITOR_FOR::NOTHING;
+    selectedActivationMethod = ACTIVATION_METHOD::NOTHING;
     targetHotkeyVkid = 0;
-
-    checkActivationMethodTimer = new QTimer(this);
 
     // Event Connections
     // --------------------------------------------------
@@ -625,7 +647,6 @@ MainWindow::MainWindow(QWidget* parent)
         }
     }
 
-    // return here
 
     if(loadStylesheetFile("./style_sheet.qss")) {
         logToConsole("Loaded QSS stylesheet ./style_sheet.qss - theme has been applied.", CLOG_INFO);
@@ -640,7 +661,7 @@ MainWindow::MainWindow(QWidget* parent)
 
         RightClickEventFilter(MainWindow* main_window_parent) : mainWindowParent(main_window_parent) {}
 
-        inline bool eventFilter(QObject* watched, QEvent* event) override {
+        bool eventFilter(QObject* watched, QEvent* event) override {
             if(event->type() == QEvent::MouseButtonPress)    {
                 QMouseEvent* mouse_event = reinterpret_cast<QMouseEvent*>(event);
 

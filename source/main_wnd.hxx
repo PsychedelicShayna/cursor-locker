@@ -24,7 +24,7 @@ namespace Ui {
 
 using Json = nlohmann::json;
 
-enum struct MONITOR_FOR;
+enum struct ACTIVATION_METHOD;
 
 enum CONSOLE_LOG_LEVELS {
     CLOG_INFO = 0, CLOG_WARNING = 1, CLOG_ERROR = 2, CLOG_EXCEPTION = 3
@@ -36,7 +36,7 @@ private:
     Q_OBJECT
 
     // Currently selected activation method, which activationConditionChecker will use to determine what condition to check.
-    MONITOR_FOR selectedActivationMethod;
+    ACTIVATION_METHOD selectedActivationMethod;
 
     // Utility Functions
     // ----------------------------------------------------------------------------------------------------
@@ -86,41 +86,15 @@ private:
     // Unregisters the previously registered hotkey in WinAPI identified by targetHotkeyId
     bool unregisterTargetHotkey();
 
-    // The WinAPI hotkey press event is captured by the nativeEvent() virtual function implementation,
-    // and is then re-emitted as a Qt signal which is connected to this function/slot.
-    void targetHotkeyVkidPressedSlot();
-    // ----------------------------------------------------------------------------------------------------
-
     // Process Image Activation Method
     // ----------------------------------------------------------------------------------------------------
     // Stores the process image name that should be used by activateIfTargetImagePresent.
     QString targetProcessImageName;
 
-    // Function that checks whether or not targetProcessImageName is currently running, and activates or
-    // deactivates the cursor lock accordingly. Connected to checkActivationMethodTimer's timeout() signal
-    // when actively selected as an activation method.
-    void activateIfTargetImagePresent();
-    // ----------------------------------------------------------------------------------------------------
-
     // Foreground Window Title Activation Method
     // ----------------------------------------------------------------------------------------------------
     // Stores the window title that should be used by activateIfForegroundWindowMatchesTarget.
     QString targetForegroundWindowTitle;
-
-    // Function that checks if the current foreground window's title matches the title stored inside of
-    // targetForegroundWindowTitle, and activates or deactivates the cursor lock accordingly. Connected to
-    // checkActivationMethodTimer's timeout() signal when actively selected as an activation method.
-    void activateIfForegroundWindowMatchesTarget();
-    // ----------------------------------------------------------------------------------------------------
-
-    // Timer For Timed Activation Methods (Image Name, Window Title)
-    // ----------------------------------------------------------------------------------------------------
-    // Points to the member function that the timeout() signal from the below timer is connected to.
-    void(MainWindow::*selectedActivationMethodFunction)();
-
-    // Timer whose timeout() signal periodically calls the selected activation method checker function.
-    QTimer* checkActivationMethodTimer;
-    // ----------------------------------------------------------------------------------------------------
 
     // Virtual Function Implementations
     // ----------------------------------------------------------------------------------------------------
@@ -138,6 +112,23 @@ signals:
     void targetHotkeyVkidPressedSignal();
 
 private slots:
+    // The WinAPI hotkey press event is captured by the nativeEvent() virtual function implementation,
+    // and is then re-emitted as a Qt signal which is connected to this function/slot.
+    void targetHotkeyVkidPressedSlot();
+    // ----------------------------------------------------------------------------------------------------
+
+    // Function that checks whether or not targetProcessImageName is currently running, and activates or
+    // deactivates the cursor lock accordingly. Connected to checkActivationMethodTimer's timeout() signal
+    // when actively selected as an activation method.
+    void activateIfTargetImagePresent();
+    // ----------------------------------------------------------------------------------------------------
+
+    // Function that checks if the current foreground window's title matches the title stored inside of
+    // targetForegroundWindowTitle, and activates or deactivates the cursor lock accordingly. Connected to
+    // checkActivationMethodTimer's timeout() signal when actively selected as an activation method.
+    void activateIfForegroundWindowMatchesTarget();
+    // ----------------------------------------------------------------------------------------------------
+
     // Connected in constructor to cbx_activation_method's CurrentIndexChanged(int) signal.
     void changeActivationMethod(int method_index);
 
