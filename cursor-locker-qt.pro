@@ -4,8 +4,7 @@ TARGET = cursor-locker
 TEMPLATE = app
 
 DEFINES += QT_DEPRECATED_WARNINGS
-
-CONFIG += c++17
+QMAKE_CXXFLAGS += /std:c++17
 
 CONFIG(debug, debug|release): DEFINES += DEBUG
 CONFIG(release, debug|release): DEFINES += RELEASE
