@@ -126,7 +126,7 @@ bool MainWindow::unregisterTargetHotkey() {
     return result;
 }
 
-bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, long* result) {
+bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintptr* result) {
     Q_UNUSED(event_type);
     Q_UNUSED(result);
 
@@ -540,11 +540,17 @@ MainWindow::MainWindow(QWidget* parent)
     // Event Connections
     // --------------------------------------------------
     // Class SLOT() connections.
-    connect(ui->cbx_activation_method, SIGNAL(currentIndexChanged(int)), this, SLOT(changeActivationMethod(int)));
-    connect(ui->btn_edit_activation_parameter, SIGNAL(clicked()), this, SLOT(editActivationMethodParameter()));
-    connect(ui->btn_mutebeepboop, SIGNAL(clicked()), this, SLOT(toggleMuteBeepBoop()));
+    connect(ui->cbx_activation_method,              SIGNAL(currentIndexChanged(int)),
+            this,                                   SLOT(changeActivationMethod(int)));
 
-    connect(ui->txt_console, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(showConsoleContextMenu(const QPoint&)));
+    connect(ui->btn_edit_activation_parameter,      SIGNAL(clicked()),
+            this,                                   SLOT(editActivationMethodParameter()));
+
+    connect(ui->btn_mutebeepboop,                   SIGNAL(clicked()),
+            this,                                   SLOT(toggleMuteBeepBoop()));
+
+    connect(ui->txt_console,                        SIGNAL(customContextMenuRequested(const QPoint&)),
+            this,                                   SLOT(showConsoleContextMenu(const QPoint&)));
 
     // Load JSON Defaults
     // --------------------------------------------------
@@ -665,27 +671,22 @@ MainWindow::MainWindow(QWidget* parent)
         logToConsole("Cannot open style_sheet.qss, using default Windows style.", LL_WARNING);
     }
 
-    // Install Custom Event Filter For Right Clicks
-    // --------------------------------------------------
-    static struct RightClickEventFilter : public QObject {
-        MainWindow* mainWindowParent;
+    ui->btn_edit_activation_parameter->installEventFilter(
+                new LambdaEventFilter<>(this, [](QObject* parent, QObject* watched, QEvent* event) -> bool {
+                    MainWindow* main_window { reinterpret_cast<MainWindow*>(parent) };
 
-        RightClickEventFilter(MainWindow* main_window_parent) : mainWindowParent(main_window_parent) {}
+                    if(event->type() == QEvent::MouseButtonPress)   {
+                        QMouseEvent* mouse_event { reinterpret_cast<QMouseEvent*>(event) };
 
-        bool eventFilter(QObject* watched, QEvent* event) override {
-            if(event->type() == QEvent::MouseButtonPress)    {
-                QMouseEvent* mouse_event = reinterpret_cast<QMouseEvent*>(event);
+                        if(mouse_event->button() == Qt::RightButton) {
+                            if(main_window->selectedActivationMethod == ACTIVATION_METHOD::WINDOW_TITLE) {
+                                main_window->startForegroundWindowGrabber();
+                            }
+                        }
+                    }
 
-                if(mouse_event->button() == Qt::RightButton) {
-                    mainWindowParent->startForegroundWindowGrabber();
-                }
-            }
-
-            return false;
-        }
-    } right_click_event_filter(this);
-
-    ui->btn_edit_activation_parameter->installEventFilter(&right_click_event_filter);
+                    return false;
+                }));
 }
 
 MainWindow::~MainWindow() {

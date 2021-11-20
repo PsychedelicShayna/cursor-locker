@@ -4,17 +4,23 @@
 #undef UNICODE
 
 #include <QMainWindow>
+#include <QPushButton>
 #include <QMessageBox>
 #include <QScrollBar>
-#include <QTimer>
 #include <QMenu>
+
+#include <QTimer>
 #include <QPair>
+
+#include <QMouseEvent>
+#include <QEvent>
 
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <tuple>
 
 #include "json.hxx"
 
@@ -98,7 +104,7 @@ private:
 
     // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
     // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.
-    bool nativeEvent(const QByteArray& event_type, void* message, long* result);
+    bool nativeEvent(const QByteArray& event_type, void* message, qintptr* result) override;
     // ----------------------------------------------------------------------------------------------------
 
 signals:
@@ -147,7 +153,55 @@ private slots:
 
 public:
     explicit MainWindow(QWidget* parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override;
+};
+
+template<typename ...LARG>
+class LambdaEventFilter : public QObject {
+protected:
+    struct AbstractLambdaContainer {
+        virtual bool CallLambdaFunction(QObject*, QObject*, QEvent*) = 0;
+        virtual ~AbstractLambdaContainer() = default;
+    } *lambdaContainer;
+
+    template<typename LF>
+    class LambdaContainer : public AbstractLambdaContainer {
+    protected:
+        std::tuple<LARG...> lambdaArguments;
+        LF lambdaFunction;
+
+    public:
+        bool CallLambdaFunction(QObject* parent, QObject* watched, QEvent* event) override {
+            auto calling_arguments = std::tuple_cat(std::make_tuple(parent, watched, event), lambdaArguments);
+            return std::apply(lambdaFunction, calling_arguments);
+        }
+
+        LambdaContainer(LF lambda_function, LARG... larg) : lambdaFunction(lambda_function) {
+            lambdaArguments = std::make_tuple(larg...);
+        }
+    };
+
+    QObject* parentQObject;
+
+public:
+    bool eventFilter(QObject* watched, QEvent* event) override {
+        return lambdaContainer->CallLambdaFunction(parentQObject, watched, event);
+    }
+
+    template<typename LF>
+    LambdaEventFilter(QObject* parent, LF lambda_function, LARG... larg) : parentQObject(parent) {
+        lambdaContainer = new LambdaContainer<LF> { lambda_function, larg... };
+    }
+
+    ~LambdaEventFilter() override {
+        if(lambdaContainer != nullptr) {
+            delete lambdaContainer;
+        }
+    }
 };
 
 #endif // MAIN_WINDOW_DLG_HXX
+
+
+
+
