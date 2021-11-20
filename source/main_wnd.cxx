@@ -126,8 +126,18 @@ bool MainWindow::toggleCursorLock() {
 }
 
 bool MainWindow::registerTargetHotkey() {
-    BOOL result { RegisterHotKey(HWND(winId()), targetHotkeyId, MOD_NOREPEAT, targetHotkeyVkid) };
-    logToConsole({"RegisterHotKey(HWND(winId), 0x", QString::number(targetHotkeyId, 16), ", MOD_NOREPEAT, 0x", QString::number(targetHotkeyVkid, 16), ") returned ", result ? "true" : "false"});
+    BOOL result { RegisterHotKey(HWND(winId()), targetHotkeyId, MOD_NOREPEAT | static_cast<int>(targetHotkeyModifier), targetHotkeyVkid) };
+
+    logToConsole({
+                     "RegisterHotKey(HWND(winId), 0x",
+                     QString::number(targetHotkeyId, 16), \
+                     ", MOD_NOREPEAT | ",
+                     QString::number(static_cast<int>(targetHotkeyModifier)),
+                     ", 0x",
+                     QString::number(targetHotkeyVkid, 16),
+                     ") returned ",
+                     result ? "true" : "false"
+                 });
     return result;
 }
 
@@ -300,6 +310,24 @@ void MainWindow::changeActivationMethod(int method_index) {
     // Ensure the cursor lock is disabled before switching over to a new activation method.
     disableCursorLock();
 
+    if(cbxHotkeyModifier != nullptr) {
+        if(cbxHotkeyModifier->layout() == ui->hlActivationParameter) {
+            ui->hlActivationParameter->removeWidget(cbxHotkeyModifier);
+        }
+
+        cbxHotkeyModifier->setEnabled(false);
+        cbxHotkeyModifier->setHidden(true);
+    }
+
+    if(btnGrabForegroundWindow != nullptr) {
+        if(btnGrabForegroundWindow->layout() == ui->hlActivationParameter) {
+            ui->hlActivationParameter->removeWidget(btnGrabForegroundWindow);
+        }
+
+        btnGrabForegroundWindow->setEnabled(false);
+        btnGrabForegroundWindow->setHidden(true);
+    }
+
     logToConsole("--------------------------------------------------");
 
     switch(method_index) {
@@ -331,6 +359,9 @@ void MainWindow::changeActivationMethod(int method_index) {
             ui->linActivationParameter->setText(QString { hex_vkid });
         }
 
+        cbxHotkeyModifier->setHidden(false);
+        ui->hlActivationParameter->insertWidget(0, cbxHotkeyModifier, 0);
+
         break;
     }
 
@@ -359,6 +390,10 @@ void MainWindow::changeActivationMethod(int method_index) {
             ui->linActivationParameter->setText(QString { targetForegroundWindowTitle });
         }
 
+        btnGrabForegroundWindow->setHidden(false);
+        btnGrabForegroundWindow->setEnabled(true);
+        ui->hlActivationParameter->insertWidget(0, btnGrabForegroundWindow, 0);
+
         break;
     }
     }
@@ -371,10 +406,44 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
 }
 
+void MainWindow::changeHotkeyModifier(int modifier_index) {
+    switch(modifier_index) {
+    case(0) : {
+        targetHotkeyModifier = HOTKEY_MOD::NONE;
+        break;
+    }
+
+    case(1) : {
+        targetHotkeyModifier = HOTKEY_MOD::ALT;
+        break;
+    }
+
+    case(2) : {
+        targetHotkeyModifier = HOTKEY_MOD::CONTROL;
+        break;
+    }
+
+    case(3) : {
+        targetHotkeyModifier = HOTKEY_MOD::SHIFT;
+        break;
+    }
+
+    case(4) : {
+        targetHotkeyModifier = HOTKEY_MOD::WIN;
+        break;
+    }
+    }
+}
+
 void MainWindow::editActivationMethodParameter() {
     if(ui->btnEditActivationParameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
-        ui->linActivationParameter->setEnabled(true);
         ui->btnEditActivationParameter->setText("Confirm");
+        ui->linActivationParameter->setEnabled(true);
+        ui->cbxActivationMethod->setEnabled(false);
+
+        if(selectedActivationMethod == ACTIVATION_METHOD::HOTKEY) {
+            cbxHotkeyModifier->setEnabled(true);
+        }
     } else if(ui->btnEditActivationParameter->text() == "Confirm") {
         switch(selectedActivationMethod) {
         case ACTIVATION_METHOD::HOTKEY : {
@@ -399,6 +468,8 @@ void MainWindow::editActivationMethodParameter() {
                 }
             }
 
+            cbxHotkeyModifier->setEnabled(false);
+
             break;
         }
 
@@ -417,8 +488,9 @@ void MainWindow::editActivationMethodParameter() {
         }
         }
 
-        ui->linActivationParameter->setEnabled(false);
         ui->btnEditActivationParameter->setText("Edit");
+        ui->linActivationParameter->setEnabled(false);
+        ui->cbxActivationMethod->setEnabled(true);
     }
 }
 
@@ -439,6 +511,7 @@ void MainWindow::startForegroundWindowGrabber() {
                             timeout_counter = 0;
                             ui->linActivationParameter->clear();
                             ui->btnEditActivationParameter->setEnabled(true);
+                            ui->cbxActivationMethod->setEnabled(true);
                         }};
 
                     if(++timeout_counter > max_timeouts) {
@@ -477,6 +550,7 @@ void MainWindow::startForegroundWindowGrabber() {
             && ui->btnEditActivationParameter->isEnabled()
             ) {
         ui->btnEditActivationParameter->setEnabled(false);
+        ui->cbxActivationMethod->setEnabled(false);
         grab_window_timer->start(500);
     }
 }
@@ -531,7 +605,7 @@ MainWindow::MainWindow(QWidget* parent)
       QMainWindow       { parent },
       ui                { new Ui::MainWindow },
       minimumLogLevel   { LL_INFO },
-      targetHotkeyId    { 420 }
+      targetHotkeyId    { 0x1A4 }
 {
     ui->setupUi(this);
 
@@ -560,9 +634,21 @@ MainWindow::MainWindow(QWidget* parent)
     selectedActivationMethod = ACTIVATION_METHOD::NOTHING;
     targetHotkeyVkid = 0;
 
+    cbxHotkeyModifier = new QComboBox(this);
+    cbxHotkeyModifier->addItems({"NONE", "ALT", "CTRL", "SHIFT", "WIN"});
+    cbxHotkeyModifier->setEnabled(false);
+    cbxHotkeyModifier->setHidden(true);
+    cbxHotkeyModifier->setMinimumWidth(75);
+
+    btnGrabForegroundWindow = new QPushButton(" Grab ", this);
+    btnGrabForegroundWindow->setEnabled(false);
+    btnGrabForegroundWindow->setHidden(true);
+
     // Event Connections
-    // --------------------------------------------------
+    // ====================================================================================================
     // Class SLOT() connections.
+
+    // Static QML UI File Widgets --------------------------------------------------
     connect(ui->cbxActivationMethod,                SIGNAL(currentIndexChanged(int)),
             this,                                   SLOT(changeActivationMethod(int)));
 
@@ -574,6 +660,14 @@ MainWindow::MainWindow(QWidget* parent)
 
     connect(ui->txtConsole,                         SIGNAL(customContextMenuRequested(const QPoint&)),
             this,                                   SLOT(showConsoleContextMenu(const QPoint&)));
+
+    // Dynamic Class Widgets --------------------------------------------------
+    connect(cbxHotkeyModifier,                      SIGNAL(currentIndexChanged(int)),
+            this,                                   SLOT(changeHotkeyModifier(int)));
+
+    connect(btnGrabForegroundWindow,                SIGNAL(clicked()),
+            this,                                   SLOT(startForegroundWindowGrabber()));
+
 
     // Load JSON Defaults
     // --------------------------------------------------

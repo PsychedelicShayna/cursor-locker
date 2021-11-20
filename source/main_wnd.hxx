@@ -84,7 +84,9 @@ private:
     QComboBox* cbxHotkeyModifier;     // A QComboBox to select a modifier for the hotkey, that gets dynamically added to the layout when hotkey mode is selected.
 
     QString targetProcessImageName;         // The target process image name, used for the process image activation method.
+
     QString targetForegroundWindowTitle;    // The target window title, used for the window title activation method.
+    QPushButton* btnGrabForegroundWindow;   // A button to start the foreground window grabber, that gets dynamically added to the layout when window title mode is selected.
 
     // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
     // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.
@@ -116,6 +118,9 @@ private slots:
 
     // Connected in constructor to cbx_activation_method's CurrentIndexChanged(int) signal.
     void changeActivationMethod(int method_index);
+
+    // Connected in constructor to cbxHotkeyModifier's CurrentIndexChanged(int) signal.
+    void changeHotkeyModifier(int modifier_index);
 
     // Connected in constructor to btn_edit_activation_parameter's clicked() signal.
     void editActivationMethodParameter();

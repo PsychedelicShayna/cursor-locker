@@ -39,6 +39,12 @@
           <layout class="QHBoxLayout" name="hlActivationMethod" stretch="5,0">
            <item>
             <widget class="QComboBox" name="cbxActivationMethod">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>25</height>
+              </size>
+             </property>
              <item>
               <property name="text">
                <string>Nothing</string>
@@ -71,7 +77,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="hlActivationParameter">
+          <layout class="QHBoxLayout" name="hlActivationParameter" stretch="0,0">
            <item>
             <widget class="QLineEdit" name="linActivationParameter">
              <property name="enabled">
