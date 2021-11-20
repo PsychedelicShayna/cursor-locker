@@ -25,20 +25,20 @@
     <height>0</height>
    </size>
   </property>
-  <widget class="QWidget" name="centralWidget">
+  <widget class="QWidget" name="gdMain">
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
-     <layout class="QVBoxLayout" name="grp_main_layout">
+     <layout class="QVBoxLayout" name="vlMain">
       <item>
-       <widget class="QGroupBox" name="grp_activation">
+       <widget class="QGroupBox" name="vlActivation">
         <property name="title">
          <string>Activation Method</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="5,0">
+          <layout class="QHBoxLayout" name="hlActivationMethod" stretch="5,0">
            <item>
-            <widget class="QComboBox" name="cbx_activation_method">
+            <widget class="QComboBox" name="cbxActivationMethod">
              <item>
               <property name="text">
                <string>Nothing</string>
@@ -62,7 +62,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="btn_mutebeepboop">
+            <widget class="QPushButton" name="btnMuteBeepBoop">
              <property name="text">
               <string>Mute</string>
              </property>
@@ -71,9 +71,9 @@
           </layout>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="grp_activation_parameters">
+          <layout class="QHBoxLayout" name="hlActivationParameter">
            <item>
-            <widget class="QLineEdit" name="lin_activation_parameter">
+            <widget class="QLineEdit" name="linActivationParameter">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -83,7 +83,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="btn_edit_activation_parameter">
+            <widget class="QPushButton" name="btnEditActivationParameter">
              <property name="text">
               <string>Edit</string>
              </property>
@@ -95,13 +95,13 @@
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="grp_console">
+       <widget class="QGroupBox" name="vlConsole">
         <property name="title">
          <string>Debug Console</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
-          <widget class="QPlainTextEdit" name="txt_console">
+          <widget class="QPlainTextEdit" name="txtConsole">
            <property name="contextMenuPolicy">
             <enum>Qt::CustomContextMenu</enum>
            </property>

@@ -23,17 +23,20 @@
 #include <tuple>
 
 #include "json.hxx"
+using Json = nlohmann::json;
 
 namespace Ui {
     class MainWindow;
 }
 
-using Json = nlohmann::json;
-
 enum struct ACTIVATION_METHOD;
+enum struct HOTKEY_MOD;
 
 enum CONSOLE_LOG_LEVELS {
-    LL_INFO = 0, LL_WARNING = 1, LL_ERROR = 2, LL_EXCEPTION = 3
+    LL_INFO         = 0,
+    LL_WARNING      = 1,
+    LL_ERROR        = 2,
+    LL_EXCEPTION    = 3
 };
 
 class MainWindow : public QMainWindow {
@@ -59,48 +62,29 @@ private:
     CONSOLE_LOG_LEVELS minimumLogLevel;
 
     QList<QPair<CONSOLE_LOG_LEVELS, QString>> logMessages;
-    void displayLogMessagesInConsole(bool just_add_latest=true);
+    void refreshConsoleLogMessages(bool just_add_latest = false);
 
     // Functions to simplify logging messages to the UI's debug console.
-    void logToConsole(const QList<QString>&, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
-    void logToConsole(const char*, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
+    void logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
+    void logToConsole(const QString& message, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
+    void logToConsole(const char* message, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
 
-    // Return the RECT of the current foreground window.
-    RECT getForegroundWindowRect();
+    RECT getForegroundWindowRect();  // Return the RECT of the current foreground window in Windows.
 
-    // Applies ClipCursor to the foreground window RECT
-    void enableCursorLock();
+    void enableCursorLock();    // Enable the cursor lock by calling ClipCursor with getForegroundWindowRect.
+    void disableCursorLock();   // Disable the cursor lock by calling ClipCursor(nullptr) with a nullptr.
+    bool toggleCursorLock();    // Toggles enableCursorLock/disableCursorLock based on a static bool.
 
-    // Calls ClipCursor with nullptr to disable clipping.
-    void disableCursorLock();
+    bool registerTargetHotkey();    // Registers a WinAPI hotkey using targetHotkeyId and targetHotkeyVkid.
+    bool unregisterTargetHotkey();  // Unregisters the hotkey previously registered with targetHotkeyId.
 
-    // Toggles enableCursorLock/disableCursorLock based on a static bool.
-    bool toggleCursorLock();
-    // ----------------------------------------------------------------------------------------------------
+    const uint32_t targetHotkeyId;    // The ID used by WinAPI to identify the registered hotkey, used for the hotkey activation method.
+    uint8_t targetHotkeyVkid;         // The virtual key ID that identifies the target key, used for the hotkey activation method.
+    HOTKEY_MOD targetHotkeyModifier;  // The modifier associated with the VKID (e.g. control, alt, shift), used for the hotkey activation method.
+    QComboBox* cbxHotkeyModifier;     // A QComboBox to select a modifier for the hotkey, that gets dynamically added to the layout when hotkey mode is selected.
 
-    // Hotkey Activation Method
-    // ----------------------------------------------------------------------------------------------------
-    // The ID by which the registered hotkey is refered to in WinAPI, assigned once in constructor.
-    const uint32_t targetHotkeyId;
-
-    // The VKID of the registered hotkey, which determines what key needs to be pressed to trigger the activation method.
-    uint8_t targetHotkeyVkid;
-
-    // Registers a hotkey in WinAPI using targetHotkeyVkid, identified by targetHotkeyId.
-    bool registerTargetHotkey();
-
-    // Unregisters the previously registered hotkey in WinAPI identified by targetHotkeyId
-    bool unregisterTargetHotkey();
-
-    // Process Image Activation Method
-    // ----------------------------------------------------------------------------------------------------
-    // Stores the process image name that should be used by activateIfTargetImagePresent.
-    QString targetProcessImageName;
-
-    // Foreground Window Title Activation Method
-    // ----------------------------------------------------------------------------------------------------
-    // Stores the window title that should be used by activateIfForegroundWindowMatchesTarget.
-    QString targetForegroundWindowTitle;
+    QString targetProcessImageName;         // The target process image name, used for the process image activation method.
+    QString targetForegroundWindowTitle;    // The target window title, used for the window title activation method.
 
     // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
     // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.

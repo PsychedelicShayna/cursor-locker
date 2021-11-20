@@ -3,16 +3,24 @@
 
 enum struct ACTIVATION_METHOD {
     NOTHING         =   0b00000000,
-    KEYBIND         =   0b00000001,
+    HOTKEY          =   0b00000001,
     PROCESS_IMAGE   =   0b00000010,
     WINDOW_TITLE    =   0b00000100,
 };
 
+enum struct HOTKEY_MOD {
+    NONE    = NULL,
+    ALT     = MOD_ALT,
+    CONTROL = MOD_CONTROL,
+    SHIFT   = MOD_SHIFT,
+    WIN     = MOD_WIN
+};
+
 bool MainWindow::loadStylesheetFile(const std::string& file_path) {
-    std::ifstream input_stream(file_path, std::ios::binary);
+    std::ifstream input_stream { file_path, std::ios::binary };
 
     if(input_stream.good()) {
-        std::string style_sheet((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
+        std::string style_sheet { std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() };
         input_stream.close();
 
         logToConsole({"Read ", QString::number(style_sheet.size()), " bytes from stylesheet @ ", QString::fromStdString(file_path)});
@@ -32,35 +40,37 @@ void MainWindow::beepBoop(QList<QPair<int, int>> freqdur_list) {
     }
 }
 
-void MainWindow::displayLogMessagesInConsole(bool just_add_latest) {
-    auto print_console_message_qpair = [this](const QPair<CONSOLE_LOG_LEVELS, QString>& pair) -> void {
+void MainWindow::refreshConsoleLogMessages(bool just_add_latest) {
+    auto print_console_message_qpair { [this](const QPair<CONSOLE_LOG_LEVELS, QString>& pair) -> void {
         if(minimumLogLevel > pair.first) return;
 
-        ui->txt_console->moveCursor(QTextCursor::End);
+        ui->txtConsole->moveCursor(QTextCursor::End);
 
         static const QMap<CONSOLE_LOG_LEVELS, QString>& loglevel_resolver {
             {LL_INFO, "[INFO] "}, {LL_WARNING, "[WARNING] "},
             {LL_ERROR, "[ERROR] "}, {LL_EXCEPTION, "[EXCEPTION] "}
         };
 
-        const QString& loglevel_str = loglevel_resolver.contains(pair.first)
-                ? loglevel_resolver[pair.first]
-                : "UNKNOWN";
+        const QString& loglevel_str {
+            loglevel_resolver.contains(pair.first)
+                    ? loglevel_resolver[pair.first]
+                : "UNKNOWN"
+        };
 
-        ui->txt_console->insertPlainText(loglevel_str + pair.second);
-    };
+        ui->txtConsole->insertPlainText(loglevel_str + pair.second);
+    }};
 
     if(just_add_latest) {
-        const auto& latest_pair = logMessages.last();
+        const auto& latest_pair { logMessages.last() };
         print_console_message_qpair(latest_pair);
     } else {
-        ui->txt_console->clear();
+        ui->txtConsole->clear();
         for(const auto& pair : logMessages) {
             print_console_message_qpair(pair);
         }
     }
 
-    ui->txt_console->verticalScrollBar()->setValue(ui->txt_console->verticalScrollBar()->maximum());
+    ui->txtConsole->verticalScrollBar()->setValue(ui->txtConsole->verticalScrollBar()->maximum());
 }
 
 void MainWindow::logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LEVELS loglevel) {
@@ -72,16 +82,21 @@ void MainWindow::logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LE
 
     concatenated_messages += '\n';
 
-    logMessages.append(QPair<CONSOLE_LOG_LEVELS, QString>  {loglevel, concatenated_messages});
-    displayLogMessagesInConsole();
+    logMessages.append(QPair<CONSOLE_LOG_LEVELS, QString>  { loglevel, concatenated_messages });
+    refreshConsoleLogMessages(true);
+}
+
+void MainWindow::logToConsole(const QString& message, CONSOLE_LOG_LEVELS loglevel) {
+    logMessages.append(QPair<CONSOLE_LOG_LEVELS, QString> { loglevel, message + '\n' });
+    refreshConsoleLogMessages(true);
 }
 
 void MainWindow::logToConsole(const char* message, CONSOLE_LOG_LEVELS loglevel) {
-    logToConsole({QString(message)}, loglevel);
+    logToConsole(QString { message }, loglevel);
 }
 
 RECT MainWindow::getForegroundWindowRect() {
-    HWND foreground_window_handle = GetForegroundWindow();
+    HWND foreground_window_handle { GetForegroundWindow() };
     RECT foreground_window_rect;
 
     GetWindowRect(foreground_window_handle, &foreground_window_rect);
@@ -90,7 +105,7 @@ RECT MainWindow::getForegroundWindowRect() {
 }
 
 void MainWindow::enableCursorLock() {
-    RECT foreground_window_rect = getForegroundWindowRect();
+    RECT foreground_window_rect { getForegroundWindowRect() };
     ClipCursor(&foreground_window_rect);
 }
 
@@ -99,7 +114,7 @@ void MainWindow::disableCursorLock() {
 }
 
 bool MainWindow::toggleCursorLock() {
-    static bool toggle = false;
+    static bool toggle { false };
 
     if(toggle ^= true) {
         enableCursorLock();
@@ -111,13 +126,13 @@ bool MainWindow::toggleCursorLock() {
 }
 
 bool MainWindow::registerTargetHotkey() {
-    bool result = RegisterHotKey(HWND(winId()), targetHotkeyId, MOD_NOREPEAT, targetHotkeyVkid);
+    BOOL result { RegisterHotKey(HWND(winId()), targetHotkeyId, MOD_NOREPEAT, targetHotkeyVkid) };
     logToConsole({"RegisterHotKey(HWND(winId), 0x", QString::number(targetHotkeyId, 16), ", MOD_NOREPEAT, 0x", QString::number(targetHotkeyVkid, 16), ") returned ", result ? "true" : "false"});
     return result;
 }
 
 bool MainWindow::unregisterTargetHotkey() {
-    bool result = UnregisterHotKey(HWND(winId()), targetHotkeyId);
+    BOOL result { UnregisterHotKey(HWND(winId()), targetHotkeyId) };
 
     if(result) {
         logToConsole({"UnregisterHotKey(HWND(winId), 0x", QString::number(targetHotkeyId, 16), ") returned true"});
@@ -130,7 +145,7 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintpt
     Q_UNUSED(event_type);
     Q_UNUSED(result);
 
-    MSG* msg = reinterpret_cast<MSG*>(message);
+    MSG* msg { reinterpret_cast<MSG*>(message) };
 
     /* msg->lParam Is a 64-bit integer and stores the VKID of the pressed hotkey in byte 3/8 (little-endian)
      * and so it cannot be directly compared with targetHotkeyVkid, as it stores the VKID in byte 1/1 so the
@@ -171,7 +186,7 @@ void MainWindow::activateBecauseTargetHotkeyWasPressed() {
 }
 
 void MainWindow::activateIfTargetProcessRunning() {
-    HANDLE process_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0);
+    HANDLE process_snapshot { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0) };
 
     if(process_snapshot == INVALID_HANDLE_VALUE) {
         logToConsole("Invalid handle value for snapshot of type TH32CS_SNAPPROCESS. Cannot see running tasks!", LL_ERROR);
@@ -182,8 +197,8 @@ void MainWindow::activateIfTargetProcessRunning() {
     process_entry_32.dwSize = sizeof(PROCESSENTRY32);
 
     if(Process32First(process_snapshot, &process_entry_32)) {
-        static bool first_find = true;
-        bool process_found = false;
+        static bool first_find { true };
+        bool process_found { false };
 
         do {
             if(targetProcessImageName == process_entry_32.szExeFile) {
@@ -217,12 +232,12 @@ void MainWindow::activateIfTargetProcessRunning() {
 }
 
 void MainWindow::activateIfForegroundWindowMatchesTarget() {
-    static bool first_find = true;
+    static bool first_find { true };
 
     char window_title_buffer[256];
     std::fill(window_title_buffer, window_title_buffer + sizeof(window_title_buffer), 0x00);
 
-    HWND foreground_window = GetForegroundWindow();
+    HWND foreground_window { GetForegroundWindow() };
     GetWindowTextA(foreground_window, window_title_buffer, sizeof(window_title_buffer));
 
     if(targetForegroundWindowTitle == window_title_buffer) {
@@ -252,12 +267,12 @@ void MainWindow::changeActivationMethod(int method_index) {
      * will be stored in the below member function pointer. The address is stored because when switching
      * to a new activation method, the timeout signal has to be disconnected from the old member function.
      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    static QTimer* timed_activation_method_timer = nullptr;
-    static void(MainWindow::*timed_activation_method_mfptr)() = nullptr;
+    static QTimer* timed_activation_method_timer { nullptr };
+    static void(MainWindow::*timed_activation_method_mfptr)() { nullptr };
 
     // One-time allocation for static timed_activation_method_timer
     if(timed_activation_method_timer == nullptr) {
-        timed_activation_method_timer = new QTimer(this);
+        timed_activation_method_timer = new QTimer { this };
     }
 
     /* Disconnect the timeout signal from the member function associated with the activation method, to
@@ -272,13 +287,15 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
 
     // Ensure that hotkeys are unregistered, and the hotkey pressed signal is disconnected from the slot.
-    disconnect(this, &MainWindow::targetHotkeyWasPressed, this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
+    disconnect(this, &MainWindow::targetHotkeyWasPressed,
+               this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
+
     unregisterTargetHotkey();
 
-    /* Clear lin_activation_parameter's text to allow the placeholder text of
+    /* Clear linActivationParameter's text to allow the placeholder text of
      * the selected activation method to be displayed later on.
      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    ui->lin_activation_parameter->clear();
+    ui->linActivationParameter->clear();
 
     // Ensure the cursor lock is disabled before switching over to a new activation method.
     disableCursorLock();
@@ -290,25 +307,28 @@ void MainWindow::changeActivationMethod(int method_index) {
         logToConsole("Activation method set to nothing.");
 
         selectedActivationMethod = ACTIVATION_METHOD::NOTHING;
-        ui->lin_activation_parameter->setPlaceholderText("No activation method selected");
+        ui->linActivationParameter->setPlaceholderText("No activation method selected");
         break;
     }
 
     case 1 : {
-        logToConsole("Activation mode set to VKID keybind.");
+        logToConsole("Activation mode set to VKID hotkey.");
         logToConsole("VKID list: http://www.kbdedit.com/manual/low_level_vk_list.html");
 
-        selectedActivationMethod = ACTIVATION_METHOD::KEYBIND;
-        connect(this, &MainWindow::targetHotkeyWasPressed, this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
+        selectedActivationMethod = ACTIVATION_METHOD::HOTKEY;
+
+        connect(this, &MainWindow::targetHotkeyWasPressed,
+                this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
+
         registerTargetHotkey();
 
-        ui->lin_activation_parameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
+        ui->linActivationParameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
 
         if(targetHotkeyVkid != 0) {
             char hex_vkid[5];
             std::fill(hex_vkid, hex_vkid + sizeof(hex_vkid), 0x00);
             sprintf(hex_vkid, "0x%02X", targetHotkeyVkid);
-            ui->lin_activation_parameter->setText(QString(hex_vkid));
+            ui->linActivationParameter->setText(QString { hex_vkid });
         }
 
         break;
@@ -319,10 +339,10 @@ void MainWindow::changeActivationMethod(int method_index) {
 
         selectedActivationMethod = ACTIVATION_METHOD::PROCESS_IMAGE;
         timed_activation_method_mfptr = &MainWindow::activateIfTargetProcessRunning;
-        ui->lin_activation_parameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
+        ui->linActivationParameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
 
         if(targetProcessImageName.size()) {
-            ui->lin_activation_parameter->setText(QString(targetProcessImageName));
+            ui->linActivationParameter->setText(QString { targetProcessImageName });
         }
 
         break;
@@ -333,10 +353,10 @@ void MainWindow::changeActivationMethod(int method_index) {
 
         selectedActivationMethod = ACTIVATION_METHOD::WINDOW_TITLE;
         timed_activation_method_mfptr = &MainWindow::activateIfForegroundWindowMatchesTarget;
-        ui->lin_activation_parameter->setPlaceholderText("Window title, e.g. Skyrim, Skyrim Special Edition");
+        ui->linActivationParameter->setPlaceholderText("Window title, e.g. Skyrim, Skyrim Special Edition");
 
         if(targetForegroundWindowTitle.size()) {
-            ui->lin_activation_parameter->setText(QString(targetForegroundWindowTitle));
+            ui->linActivationParameter->setText(QString { targetForegroundWindowTitle });
         }
 
         break;
@@ -344,36 +364,38 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
 
     if(timed_activation_method_mfptr != nullptr) {
-        connect(timed_activation_method_timer, &QTimer::timeout, this, timed_activation_method_mfptr);
+        connect(timed_activation_method_timer,  &QTimer::timeout,
+                this,                           timed_activation_method_mfptr);
+
         timed_activation_method_timer->start(500);
     }
 }
 
 void MainWindow::editActivationMethodParameter() {
-    if(ui->btn_edit_activation_parameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
-        ui->lin_activation_parameter->setEnabled(true);
-        ui->btn_edit_activation_parameter->setText("Confirm");
-    } else if(ui->btn_edit_activation_parameter->text() == "Confirm") {
+    if(ui->btnEditActivationParameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
+        ui->linActivationParameter->setEnabled(true);
+        ui->btnEditActivationParameter->setText("Confirm");
+    } else if(ui->btnEditActivationParameter->text() == "Confirm") {
         switch(selectedActivationMethod) {
-        case ACTIVATION_METHOD::KEYBIND : {
+        case ACTIVATION_METHOD::HOTKEY : {
             unregisterTargetHotkey();
 
-            QString vkid_str = ui->lin_activation_parameter->text();
+            QString vkid_str { ui->linActivationParameter->text() };
 
             if(vkid_str.size()) {
-                uint8_t vkid = static_cast<uint8_t>(strtol(vkid_str.toStdString().c_str(), nullptr, 16));
+                uint8_t vkid { static_cast<uint8_t>(strtol(vkid_str.toStdString().c_str(), nullptr, 16)) };
 
                 if(vkid != 0) {
                     char hex_vkid[6];
                     std::fill(hex_vkid, hex_vkid + sizeof(hex_vkid), 0x00);
                     sprintf(hex_vkid, "0x%02X", vkid);
-                    ui->lin_activation_parameter->setText(hex_vkid);
+                    ui->linActivationParameter->setText(hex_vkid);
 
                     targetHotkeyVkid = vkid;
                     registerTargetHotkey();
                 } else {
                     logToConsole({"Invalid hexadecimal value '", vkid_str, "' for activation method parameter."}, LL_WARNING);
-                    ui->lin_activation_parameter->clear();
+                    ui->linActivationParameter->clear();
                 }
             }
 
@@ -381,12 +403,12 @@ void MainWindow::editActivationMethodParameter() {
         }
 
         case ACTIVATION_METHOD::PROCESS_IMAGE : {
-            targetProcessImageName = ui->lin_activation_parameter->text();
+            targetProcessImageName = ui->linActivationParameter->text();
             break;
         }
 
         case ACTIVATION_METHOD::WINDOW_TITLE : {
-            targetForegroundWindowTitle = ui->lin_activation_parameter->text();
+            targetForegroundWindowTitle = ui->linActivationParameter->text();
             break;
         }
 
@@ -395,42 +417,43 @@ void MainWindow::editActivationMethodParameter() {
         }
         }
 
-        ui->lin_activation_parameter->setEnabled(false);
-        ui->btn_edit_activation_parameter->setText("Edit");
+        ui->linActivationParameter->setEnabled(false);
+        ui->btnEditActivationParameter->setText("Edit");
     }
 }
 
 void MainWindow::startForegroundWindowGrabber() {
-    static QTimer* grab_window_timer = nullptr;
+    static QTimer* grab_window_timer { nullptr };
 
     if(grab_window_timer == nullptr) {
-        grab_window_timer = new QTimer(this);
+        grab_window_timer = new QTimer { this };
 
         connect(grab_window_timer, &QTimer::timeout,
                 [this]() -> void {
-                    static const uint32_t max_timeouts = 15;
-                    static uint32_t timeout_counter = 0;
+                    static const uint32_t max_timeouts { 15 };
+                    static uint32_t timeout_counter { 0 };
 
-                    const auto& reset_window_grabber = [&]() -> void {
-                        grab_window_timer->stop();
-                        timeout_counter = 0;
-                        ui->lin_activation_parameter->clear();
-                        ui->btn_edit_activation_parameter->setEnabled(true);
-                    };
+                    const auto& reset_window_grabber {
+                        [&]() -> void {
+                            grab_window_timer->stop();
+                            timeout_counter = 0;
+                            ui->linActivationParameter->clear();
+                            ui->btnEditActivationParameter->setEnabled(true);
+                        }};
 
                     if(++timeout_counter > max_timeouts) {
                         reset_window_grabber();
                     } else {
                         beepBoop({{200, 20}});
 
-                        ui->lin_activation_parameter->setText(
+                        ui->linActivationParameter->setText(
                             "Switch to target window within timeframe: "
                             + QString::number(timeout_counter)
                             + " / "
                             + QString::number(max_timeouts)
                         );
 
-                        HWND foreground_window = GetForegroundWindow();
+                        HWND foreground_window { GetForegroundWindow() };
 
                         // Other window has been selected, as foreground_window doesn't match this program's window.
                         if(foreground_window != HWND(winId())) {
@@ -439,21 +462,21 @@ void MainWindow::startForegroundWindowGrabber() {
 
                             char window_title[256];
                             std::fill(window_title, window_title + sizeof(window_title), 0x00);
-                            size_t bytes_written = GetWindowText(foreground_window, window_title, sizeof(window_title));
+                            int32_t bytes_written { GetWindowText(foreground_window, window_title, sizeof(window_title)) };
                             logToConsole({"GetWindowText() wrote ", QString::number(bytes_written), " bytes to char window_title[256]"});
 
-                            targetForegroundWindowTitle = QString(window_title);
-                            ui->lin_activation_parameter->setText(targetForegroundWindowTitle);
+                            targetForegroundWindowTitle = QString { window_title };
+                            ui->linActivationParameter->setText(targetForegroundWindowTitle);
                         }
                     }
                 });
     }
 
     if(selectedActivationMethod == ACTIVATION_METHOD::WINDOW_TITLE
-            && ui->btn_edit_activation_parameter->text() == "Edit"
-            && ui->btn_edit_activation_parameter->isEnabled()
+            && ui->btnEditActivationParameter->text() == "Edit"
+            && ui->btnEditActivationParameter->isEnabled()
             ) {
-        ui->btn_edit_activation_parameter->setEnabled(false);
+        ui->btnEditActivationParameter->setEnabled(false);
         grab_window_timer->start(500);
     }
 }
@@ -461,22 +484,22 @@ void MainWindow::startForegroundWindowGrabber() {
 void MainWindow::toggleMuteBeepBoop() {
     if(muteBeepBoop) {
         muteBeepBoop = false;
-        ui->btn_mutebeepboop->setText("Mute");
+        ui->btnMuteBeepBoop->setText("Mute");
     } else {
         muteBeepBoop = true;
-        ui->btn_mutebeepboop->setText("Unmute");
+        ui->btnMuteBeepBoop->setText("Unmute");
     }
 }
 
 void MainWindow::showConsoleContextMenu(const QPoint& point) {
-    static QMenu* context_menu = nullptr;
-    const QPoint global_point = ui->txt_console->mapToGlobal(point);
+    static QMenu* context_menu { nullptr };
+    const QPoint global_point { ui->txtConsole->mapToGlobal(point) };
 
     if(context_menu == nullptr) {
-        context_menu = new QMenu(this);
-        QAction* ac_clear_console = context_menu->addAction("Clear Console");
+        context_menu = new QMenu { this };
+        QAction* ac_clear_console { context_menu->addAction("Clear Console") };
 
-        QMenu* submenu_loglevels = context_menu->addMenu("Log Levels");
+        QMenu* submenu_loglevels { context_menu->addMenu("Log Levels") };
         submenu_loglevels->addAction(">= INFO")->setData(0);
         submenu_loglevels->addAction(">= WARNING")->setData(1);
         submenu_loglevels->addAction(">= ERROR")->setData(2);
@@ -485,10 +508,10 @@ void MainWindow::showConsoleContextMenu(const QPoint& point) {
         connect(context_menu, &QMenu::triggered, [=](QAction* action) -> void {
             if(action == ac_clear_console) {
                 logMessages.clear();
-                displayLogMessagesInConsole(false);
+                refreshConsoleLogMessages();
             } else if(action->parentWidget() == submenu_loglevels) {
                 minimumLogLevel = static_cast<CONSOLE_LOG_LEVELS>(action->data().toInt());
-                displayLogMessagesInConsole(false);
+                refreshConsoleLogMessages();
 
                 for(QAction* other_action : submenu_loglevels->actions()) {
                     other_action->setChecked(false);
@@ -505,10 +528,10 @@ void MainWindow::showConsoleContextMenu(const QPoint& point) {
 
 MainWindow::MainWindow(QWidget* parent)
     :
-      QMainWindow(parent),
-      ui(new Ui::MainWindow),
-      minimumLogLevel(LL_INFO),
-      targetHotkeyId(420)
+      QMainWindow       { parent },
+      ui                { new Ui::MainWindow },
+      minimumLogLevel   { LL_INFO },
+      targetHotkeyId    { 420 }
 {
     ui->setupUi(this);
 
@@ -523,7 +546,7 @@ MainWindow::MainWindow(QWidget* parent)
                 Qt::WindowMaximizeButtonHint
                 );
 
-    HWND desktop_window_handle = GetDesktopWindow();
+    HWND desktop_window_handle { GetDesktopWindow() };
     RECT desktop_window_rect;
 
     GetWindowRect(desktop_window_handle, &desktop_window_rect);
@@ -540,24 +563,24 @@ MainWindow::MainWindow(QWidget* parent)
     // Event Connections
     // --------------------------------------------------
     // Class SLOT() connections.
-    connect(ui->cbx_activation_method,              SIGNAL(currentIndexChanged(int)),
+    connect(ui->cbxActivationMethod,                SIGNAL(currentIndexChanged(int)),
             this,                                   SLOT(changeActivationMethod(int)));
 
-    connect(ui->btn_edit_activation_parameter,      SIGNAL(clicked()),
+    connect(ui->btnEditActivationParameter,         SIGNAL(clicked()),
             this,                                   SLOT(editActivationMethodParameter()));
 
-    connect(ui->btn_mutebeepboop,                   SIGNAL(clicked()),
+    connect(ui->btnMuteBeepBoop,                    SIGNAL(clicked()),
             this,                                   SLOT(toggleMuteBeepBoop()));
 
-    connect(ui->txt_console,                        SIGNAL(customContextMenuRequested(const QPoint&)),
+    connect(ui->txtConsole,                         SIGNAL(customContextMenuRequested(const QPoint&)),
             this,                                   SLOT(showConsoleContextMenu(const QPoint&)));
 
     // Load JSON Defaults
     // --------------------------------------------------
-    std::ifstream input_stream("./defaults.json", std::ios::binary);
+    std::ifstream input_stream { "./defaults.json", std::ios::binary };
 
     if(input_stream.good()) {
-        std::string raw_json_string((std::istreambuf_iterator<char>(input_stream)), (std::istreambuf_iterator<char>()));
+        std::string raw_json_string { std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() };
         input_stream.close();
 
         Json default_values;
@@ -578,8 +601,8 @@ MainWindow::MainWindow(QWidget* parent)
         if(default_values.size()) {
             if(default_values.contains("vkid")) {
                 if(default_values["vkid"].is_string() && default_values["vkid"] != "") {
-                    const std::string& vkid_hex_string = default_values["vkid"].get<std::string>();
-                    uint8_t vkid = static_cast<uint8_t>(strtol(vkid_hex_string.c_str(), nullptr, 16));
+                    const std::string& vkid_hex_string { default_values["vkid"].get<std::string>() };
+                    uint8_t vkid { static_cast<uint8_t>(strtol(vkid_hex_string.c_str(), nullptr, 16)) };
                     targetHotkeyVkid = vkid;
 
                     logToConsole({"(defaults.json) Loaded activation hotkey VKID \"0x", QString::number(targetHotkeyVkid, 16), "\""});
@@ -611,11 +634,11 @@ MainWindow::MainWindow(QWidget* parent)
 
             if(default_values.contains("method")) {
                 if(default_values["method"].is_string() && default_values["method"] != "") {
-                    const std::string& method_string = default_values["method"].get<std::string>();
-                    static const Json method_resolver = {{"vkid", 1}, {"image", 2}, {"title", 3}};
+                    const std::string& method_string { default_values["method"].get<std::string>() };
+                    static const Json method_resolver { {{"vkid", 1}, {"image", 2}, {"title", 3}} };
 
                     if(method_resolver.contains(method_string)) {
-                        ui->cbx_activation_method->setCurrentIndex(method_resolver[method_string].get<uint8_t>());
+                        ui->cbxActivationMethod->setCurrentIndex(method_resolver[method_string].get<uint8_t>());
                         logToConsole({"(defaults.json) Loaded default activation method \"", QString::fromStdString(method_string), "\""});
                     } else {
                         logToConsole({"(defaults.json) Invalid activation method \"", QString::fromStdString(method_string), "\" for \"method\" key."}, LL_WARNING);
@@ -629,9 +652,9 @@ MainWindow::MainWindow(QWidget* parent)
 
             if(default_values.contains("muted")) {
                 if(default_values["muted"].is_boolean()) {
-                    const bool& muted_value = default_values["muted"].get<bool>();
+                    const bool& muted_value { default_values["muted"].get<bool>() };
                     muteBeepBoop = muted_value;
-                    ui->btn_mutebeepboop->setText("Unmute");
+                    ui->btnMuteBeepBoop->setText("Unmute");
                     logToConsole("(defaults.json) Loaded default mute state.");
                 } else {
                     logToConsole("(defaults.json) Invalid value type for \"muted\" key, should be a boolean.", LL_WARNING);
@@ -640,18 +663,18 @@ MainWindow::MainWindow(QWidget* parent)
             }
         }
     } else {
-        std::ofstream output_stream("./defaults.json", std::ios::binary);
+        std::ofstream output_stream { "./defaults.json", std::ios::binary };
 
         if(output_stream.good()) {
-            Json json_template = {
+            const Json& json_template {{
                 {"vkid", ""},
                 {"image", ""},
                 {"title", ""},
                 {"method", ""},
                 {"muted", false}
-            };
+            }};
 
-            const std::string& dumped_json = json_template.dump(4);
+            const std::string& dumped_json { json_template.dump(4) };
 
             output_stream.write(dumped_json.data(), dumped_json.size());
             output_stream.close();
@@ -671,7 +694,7 @@ MainWindow::MainWindow(QWidget* parent)
         logToConsole("Cannot open style_sheet.qss, using default Windows style.", LL_WARNING);
     }
 
-    ui->btn_edit_activation_parameter->installEventFilter(
+    ui->btnEditActivationParameter->installEventFilter(
                 new LambdaEventFilter<>(this, [](QObject* parent, QObject* watched, QEvent* event) -> bool {
                     MainWindow* main_window { reinterpret_cast<MainWindow*>(parent) };
 
