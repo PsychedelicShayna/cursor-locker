@@ -1,6 +1,6 @@
 #include <QApplication>
 
-#include "main_wnd.hxx"
+#include "mainwindow_dialog.hxx"
 
 int main(int argc, char* argv[]) {
     QApplication application(argc, argv);

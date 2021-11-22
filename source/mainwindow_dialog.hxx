@@ -15,12 +15,19 @@
 #include <QMouseEvent>
 #include <QEvent>
 
+#ifndef WIN32_MEAN_AND_LEAN
+#define WIN32_MEAN_AND_LEAN
+#endif
+
 #include <Windows.h>
 #include <TlHelp32.h>
+
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <tuple>
+
+#include "windowbrowser_dialog.hxx"
 
 #include "json.hxx"
 using Json = nlohmann::json;
@@ -90,7 +97,7 @@ private:
 
     // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
     // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.
-    bool nativeEvent(const QByteArray& event_type, void* message, qintptr* result) override;
+    bool nativeEvent(const QByteArray& event_type, void* message, qintptr* result);
     // ----------------------------------------------------------------------------------------------------
 
 signals:
@@ -133,6 +140,8 @@ private slots:
      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     void startForegroundWindowGrabber(); //////
     // - - - - - - - - - - - - - - - - - - ///
+
+    void spawnWindowTreeDialog();
 
     // Connected in constructor to btn_mutebeepboop's clicked() signal.
     void toggleMuteBeepBoop();

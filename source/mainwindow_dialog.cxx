@@ -1,5 +1,5 @@
-#include "main_wnd.hxx"
-#include "ui_main_wnd.h"
+#include "mainwindow_dialog.hxx"
+#include "ui_mainwindow_dialog.h"
 
 enum struct ACTIVATION_METHOD {
     NOTHING         =   0b00000000,
@@ -151,6 +151,8 @@ bool MainWindow::unregisterTargetHotkey() {
     return result;
 }
 
+
+
 bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintptr* result) {
     Q_UNUSED(event_type);
     Q_UNUSED(result);
@@ -196,6 +198,8 @@ void MainWindow::activateBecauseTargetHotkeyWasPressed() {
 }
 
 void MainWindow::activateIfTargetProcessRunning() {
+    if(!targetProcessImageName.size()) return;
+
     HANDLE process_snapshot { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0) };
 
     if(process_snapshot == INVALID_HANDLE_VALUE) {
@@ -242,6 +246,8 @@ void MainWindow::activateIfTargetProcessRunning() {
 }
 
 void MainWindow::activateIfForegroundWindowMatchesTarget() {
+    if(!targetForegroundWindowTitle.size()) return;
+
     static bool first_find { true };
 
     char window_title_buffer[256];
@@ -555,6 +561,23 @@ void MainWindow::startForegroundWindowGrabber() {
     }
 }
 
+void MainWindow::spawnWindowTreeDialog() {
+    static WindowTreeDialog* window_tree_dialog { nullptr };
+
+    if(window_tree_dialog == nullptr) {
+        window_tree_dialog = new WindowTreeDialog(this);
+        window_tree_dialog->setAttribute(Qt::WA_DeleteOnClose);
+
+        connect(window_tree_dialog, &WindowTreeDialog::destroyed, [](QObject*) -> void {
+            window_tree_dialog = nullptr;
+        });
+    }
+
+    logToConsole("Called WindowTreeDialog::show");
+
+    window_tree_dialog->show();
+}
+
 void MainWindow::toggleMuteBeepBoop() {
     if(muteBeepBoop) {
         muteBeepBoop = false;
@@ -666,7 +689,7 @@ MainWindow::MainWindow(QWidget* parent)
             this,                                   SLOT(changeHotkeyModifier(int)));
 
     connect(btnGrabForegroundWindow,                SIGNAL(clicked()),
-            this,                                   SLOT(startForegroundWindowGrabber()));
+            this,                                   SLOT(spawnWindowTreeDialog()));
 
 
     // Load JSON Defaults
