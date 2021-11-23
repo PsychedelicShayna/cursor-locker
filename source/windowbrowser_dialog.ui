@@ -36,7 +36,7 @@
        </attribute>
        <column>
         <property name="text">
-         <string>Process Image                      </string>
+         <string>Process Image/Window Title                   </string>
         </property>
        </column>
        <column>
@@ -46,7 +46,7 @@
        </column>
        <column>
         <property name="text">
-         <string>Visible</string>
+         <string>Visibility</string>
         </property>
        </column>
       </widget>
@@ -54,7 +54,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="vlOptions" stretch="0,0,0,0">
+    <layout class="QVBoxLayout" name="vlOptions" stretch="0,0,0,0,0">
      <property name="leftMargin">
       <number>2</number>
      </property>
@@ -85,47 +85,6 @@
       </widget>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="vlFilters">
-       <property name="topMargin">
-        <number>10</number>
-       </property>
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Scan Filters</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="Line" name="line">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="cbFilterInvisible">
-         <property name="text">
-          <string>Filter Invisible</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="cbFilterDuplicates">
-         <property name="text">
-          <string>Filter Duplicates</string>
-         </property>
-         <property name="checked">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
       <layout class="QVBoxLayout" name="vlScanner">
        <property name="topMargin">
         <number>10</number>
@@ -148,6 +107,19 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btnScan">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>25</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Perform Scan</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QCheckBox" name="cbAutoScanner">
          <property name="layoutDirection">
           <enum>Qt::LeftToRight</enum>
@@ -161,91 +133,120 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnScan">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>25</height>
-          </size>
+        <widget class="QSpinBox" name="sbAutoScannerInterval">
+         <property name="suffix">
+          <string>ms</string>
          </property>
-         <property name="text">
-          <string>Scan Processes</string>
+         <property name="prefix">
+          <string/>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Found Processes</string>
+         <property name="minimum">
+          <number>1500</number>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
+         <property name="maximum">
+          <number>10000</number>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLCDNumber" name="lcdProcesses">
-         <property name="font">
-          <font>
-           <weight>50</weight>
-           <bold>false</bold>
-          </font>
+         <property name="stepType">
+          <enum>QAbstractSpinBox::DefaultStepType</enum>
          </property>
-         <property name="frameShape">
-          <enum>QFrame::WinPanel</enum>
+         <property name="value">
+          <number>2500</number>
          </property>
-         <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
-         </property>
-         <property name="lineWidth">
-          <number>1</number>
-         </property>
-         <property name="intValue" stdset="0">
-          <number>0</number>
+         <property name="displayIntegerBase">
+          <number>10</number>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_4">
-         <property name="text">
-          <string>Found Windows</string>
+        <widget class="QSlider" name="hsAutoScannerInterval">
+         <property name="minimum">
+          <number>1500</number>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
+         <property name="maximum">
+          <number>10000</number>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLCDNumber" name="lcdWindows">
-         <property name="frameShape">
-          <enum>QFrame::WinPanel</enum>
+         <property name="singleStep">
+          <number>100</number>
          </property>
-         <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
+         <property name="value">
+          <number>2500</number>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnMemory">
-         <property name="text">
-          <string>Memory Leak?</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
          <property name="orientation">
-          <enum>Qt::Vertical</enum>
+          <enum>Qt::Horizontal</enum>
          </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
+         <property name="tickPosition">
+          <enum>QSlider::NoTicks</enum>
          </property>
-        </spacer>
+        </widget>
        </item>
       </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="vlFilters">
+       <property name="topMargin">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Scan Filters</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbFilterInvisibleWindows">
+         <property name="text">
+          <string>Filter Invisible
+   Windows   </string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbFilterDuplicateWindows">
+         <property name="inputMethodHints">
+          <set>Qt::ImhNone</set>
+         </property>
+         <property name="text">
+          <string>Filter Duplicate
+    Windows    </string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbFilterDuplicateProcesses">
+         <property name="text">
+          <string>Filter Duplicate
+   Processes   </string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
      </item>
     </layout>
    </item>

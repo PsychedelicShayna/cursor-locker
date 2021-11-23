@@ -571,6 +571,13 @@ void MainWindow::spawnWindowTreeDialog() {
         connect(window_tree_dialog, &WindowTreeDialog::destroyed, [](QObject*) -> void {
             window_tree_dialog = nullptr;
         });
+
+        connect(window_tree_dialog, &WindowTreeDialog::processWindowChosen, [this](const QString& window_title) -> void {
+            ui->linActivationParameter->setText(window_title);
+            targetForegroundWindowTitle = window_title;
+            delete window_tree_dialog;
+            window_tree_dialog = nullptr;
+        });
     }
 
     logToConsole("Called WindowTreeDialog::show");
@@ -663,7 +670,7 @@ MainWindow::MainWindow(QWidget* parent)
     cbxHotkeyModifier->setHidden(true);
     cbxHotkeyModifier->setMinimumWidth(75);
 
-    btnGrabForegroundWindow = new QPushButton(" Grab ", this);
+    btnGrabForegroundWindow = new QPushButton(" Select ", this);
     btnGrabForegroundWindow->setEnabled(false);
     btnGrabForegroundWindow->setHidden(true);
 

@@ -1,7 +1,11 @@
 #include "qdebugconsole_widget.hpp"
 
-void QDebugConsole::InsertIntoTextEdit(const QPair<LOG_LEVEL, QString> mpair) {
-    if(MINIMUM_LL > mpair.first) return;
+void QDebugConsole::InsertIntoTextEdit(const QPair<QPair<LOG_LEVEL, QString>, QString> mpair) {
+    const LOG_LEVEL& log_level { mpair.first.first };
+    const QString& context { mpair.first.second };
+    const QString& message { mpair.second };
+
+    if(MINIMUM_LL > log_level) return;
     moveCursor(QTextCursor::End);
 
     static const QMap<LOG_LEVEL, QString>&     ll_resolver        {
@@ -10,10 +14,10 @@ void QDebugConsole::InsertIntoTextEdit(const QPair<LOG_LEVEL, QString> mpair) {
     };
 
     const QString& ll_string {
-        ll_resolver.contains(mpair.first) ?
-                    ll_resolver[mpair.first] : "UNKNOWN" };
+        ll_resolver.contains(log_level) ?
+                    ll_resolver[log_level] : "UNKNOWN" };
 
-    insertPlainText(ll_string + mpair.second);
+    insertPlainText(context.size() ? ll_string + "(" + context + ") " : ll_string + message);
     verticalScrollBar()->setValue(verticalScrollBar()->maximum());
 }
 
@@ -25,8 +29,16 @@ void QDebugConsole::RefreshAllLogMessages() {
     }
 }
 
+void QDebugConsole::SetContext(const QString& context) {
+    consoleContext = context;
+}
+
+void QDebugConsole::ClearContext() {
+    consoleContext.clear();
+}
+
 void QDebugConsole::log(const QString& message, LOG_LEVEL ll) {
-    const QPair<LOG_LEVEL, QString>& mpair { ll, message + '\n' };
+    const QPair<QPair<LOG_LEVEL, QString>, QString>& mpair { { ll, consoleContext }, message + '\n' };
     logMessages.append(mpair);
     emit MessageWasLogged(mpair);
 }
@@ -51,6 +63,19 @@ QDebugConsole::QDebugConsole(QWidget* parent)
 {
     setReadOnly(true);
 
-    connect(this,   SIGNAL(MessageWasLogged(const QPair<LOG_LEVEL, QString>)),
-            this,   SLOT(InsertIntoTextEdit(const QPair<LOG_LEVEL, QString>)));
+    connect(this,   SIGNAL(MessageWasLogged(const QPair<QPair<LOG_LEVEL, QString>, QString>)),
+            this,   SLOT(InsertIntoTextEdit(const QPair<QPair<LOG_LEVEL, QString>, QString>)));
+}
+
+QDebugConsoleContext::QDebugConsoleContext(QDebugConsole* console, const QString& console_context)
+    :
+      consoleContext { console_context },
+      ConsoleContext { consoleContext  },
+      Console        { console         }
+{
+    Console->SetContext(console_context);
+}
+
+QDebugConsoleContext::~QDebugConsoleContext() {
+    Console->ClearContext();
 }

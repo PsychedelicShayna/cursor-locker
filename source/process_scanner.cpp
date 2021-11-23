@@ -1,5 +1,57 @@
 #include "process_scanner.hpp"
 
+QTreeWidgetItem* ProcessScanner::ProcessInfo::WindowInfo::MakeChildItem() {
+    auto child_item {
+        new QTreeWidgetItem {{
+            WindowTitle,
+            WindowHash,
+            WindowVisibility
+        }}
+    };
+
+    return child_item;
+}
+
+ProcessScanner::ProcessInfo::WindowInfo::WindowInfo(const QString& title, const QString& hash, const bool& is_visible)
+    :
+      WindowTitle(title),
+      WindowHash(hash),
+      WindowVisibility(is_visible ? "Visible" : "Invisible"),
+      IsWindowVisible(is_visible)
+{
+
+}
+
+QTreeWidgetItem* ProcessScanner::ProcessInfo::MakeRootItem() {
+    auto root_item {
+        new QTreeWidgetItem { {
+            ProcessImageName, ProcessId
+        } }
+    };
+
+    for(const auto& window : ProcessWindows) {
+        auto child_item {
+            new QTreeWidgetItem {{
+                window.WindowTitle,
+                window.WindowHash,
+                window.WindowVisibility
+            }}
+        };
+
+        root_item->addChild(child_item);
+    }
+
+    return root_item;
+}
+
+ProcessScanner::ProcessInfo::ProcessInfo(const QString& process_image_name, const QString& process_id)
+    :
+      ProcessImageName(process_image_name),
+      ProcessId(process_id)
+{
+
+}
+
 QString ProcessScanner::getHwndHash(HWND hwnd) {
     uint8_t* hwnd_bytes { reinterpret_cast<uint8_t*>(&hwnd) };
     int32_t hwnd_size = { sizeof(hwnd) };
@@ -42,7 +94,7 @@ QString ProcessScanner::getHwndHash(HWND hwnd) {
     return hexdigest;
 }
 
-void ProcessScanner::PerformScan() {
+void ProcessScanner::PerformScan(ProcessScanner::SCAN_FILTERS filters) {
     emit ScanStarted();
 
     HANDLE process_snapshot { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
@@ -54,16 +106,28 @@ void ProcessScanner::PerformScan() {
     PROCESSENTRY32 process_entry;
     process_entry.dwSize = sizeof(PROCESSENTRY32);
 
+    QList<QString> existing_process_names;
+
     if(Process32First(process_snapshot, &process_entry)) {
         do {
             QString process_image_name { QString::fromWCharArray(process_entry.szExeFile) };
             QString process_pid { QString::number(process_entry.th32ProcessID) };
 
-            QTreeWidgetItem* top_level_item  {
-                new QTreeWidgetItem { {process_image_name, process_pid} }
-            };
+            /* The ProcessInfo instance that will store information about the current iteration's process,
+             * which will later be populated with information about its window, and emited as a signal. */
+            ProcessInfo process_information { process_image_name, process_pid };
+
+            if(filters & FILTER_DUPLICATE_PROCESSES) {
+                if(existing_process_names.contains(process_image_name)) {
+                    continue;
+                } else {
+                    existing_process_names.append(process_image_name);
+                }
+            }
 
             HWND process_window { nullptr };
+
+            QList<QString> existing_window_titles;
 
             do {
                 process_window = FindWindowEx(nullptr, process_window, nullptr, nullptr);
@@ -72,7 +136,11 @@ void ProcessScanner::PerformScan() {
                 GetWindowThreadProcessId(process_window, &window_pid);
 
                 if(window_pid == process_entry.th32ProcessID) {
-                    bool window_visible = IsWindowVisible(process_window);
+                    BOOL window_visible { IsWindowVisible(process_window) };
+
+                    if(filters & FILTER_INVISIBLE_WINDOWS && !window_visible) {
+                        continue;
+                    }
 
                     char window_title_buffer[512];
                     ZeroMemory(window_title_buffer, sizeof(window_title_buffer));
@@ -81,15 +149,22 @@ void ProcessScanner::PerformScan() {
 
                     if(bytes_written) {
                         QString window_title { window_title_buffer };
-                        top_level_item->addChild(new QTreeWidgetItem { {window_title, getHwndHash(process_window), window_visible ? "Visible" : "Invisible"} });
+
+                        if(filters & FILTER_DUPLICATE_WINDOWS) {
+                            if(existing_window_titles.contains(window_title)) {
+                                continue;
+                            } else {
+                                existing_window_titles.append(window_title);
+                            }
+                        }
+
+                        process_information.ProcessWindows.emplace_back(window_title, getHwndHash(process_window), window_visible);
                     }
                 }
             } while(process_window != nullptr);
 
-            if(top_level_item->childCount()) {
-                emit RootItemReady(top_level_item);
-            } else {
-                delete top_level_item;
+            if(process_information.ProcessWindows.size()) {
+                emit ProcessInformationReady(process_information);
             }
         } while (Process32Next(process_snapshot, &process_entry));
     }
@@ -97,4 +172,8 @@ void ProcessScanner::PerformScan() {
     CloseHandle(process_snapshot);
 
     emit ScanFinished();
+}
+
+void ProcessScanner::CrossThreadDelete(QTreeWidgetItem* new_root_item) {
+    delete new_root_item;
 }
