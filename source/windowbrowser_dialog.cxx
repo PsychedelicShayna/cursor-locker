@@ -25,7 +25,7 @@ QList<QTreeWidgetItem*> WindowTreeDialog::collectTreeChildren(QTreeWidgetItem* r
 }
 
 void WindowTreeDialog::setAllTopLevelItemsHidden(bool hidden) {
-    auto* tree = ui->trwWindowTree;
+    auto* tree { ui->trwWindowTree };
 
     for(auto iter_root_item : collectTreeRoot(tree)) {
         iter_root_item->setHidden(hidden);
@@ -36,54 +36,136 @@ void WindowTreeDialog::setAllTopLevelItemsHidden(bool hidden) {
     }
 }
 
+void WindowTreeDialog::applySearchFilterToTree() {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "applySearchFilterToTree" };
+
+    auto search_filter  { ui->linSearchFilter->text() };
+    auto tree           { ui->trwWindowTree };
+
+    setAllTopLevelItemsHidden(search_filter.size());
+
+    if(search_filter.size()) {
+        /* A recursive lambda that walks down the tree of QTreeWidgetItem*'s to search for items that match the search_filter. It does this by iterating
+         * over an initial list of QTreeWidgetItem*'s, and if an item matches the filter, then it is expanded, unhidden, its children are unhidden (if any),
+         * and its parent (if it has one) is also unhidden and expanded. Regardless of if an item matches, a list of its children will be recursively passed
+         * to this function using collectTreeChildren() after all checks have been performed, and if no children are returned by the function, the loop will
+         * never iterate, and the recursive call will never be reached, ending the recursion.
+         *
+         * Every item expanded as a result of this function will be being appended to the searchExpansions member variable, which tracks all items that have
+         * been expanded when searching, so that they can later be unexpanded when the search term is cleared, preserving the original state of the expansions.
+         * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+        std::function<void(QList<QTreeWidgetItem*>)> apply_search_filter_recursively;
+
+        apply_search_filter_recursively = [&](QList<QTreeWidgetItem*> items) {
+            std::function<void(QTreeWidgetItem*)>
+            // Simply unhide the given item.
+            f_unhide_item {
+                [](auto i) {
+                    i->setHidden(false);
+                }
+            },
+
+            // Expand the item if it isn't already expanded, and append the expanded item to searchExpansions, marking it for later unexpansion.
+            f_expand_item {
+                [&](auto i) -> void {
+                    if(!i->isExpanded()) {
+                        i->setExpanded(true);
+                        searchExpansions.append(i);
+                    }
+                }
+            },
+
+            // If the item has a parent, unhide and expand the parent.
+            f_expand_and_unhide_parent {
+                [&](auto i) -> void {
+                    if(i->parent()) {
+                        f_unhide_item(i->parent());
+                        f_expand_item(i->parent());
+                    }
+                }
+            },
+
+            // If item contains search_filter, call f_expand_and_unhide_parent, f_unhide_item, f_expand_item, and f_unhide_item over children.
+            // Regardless of if the item contains search_filter, call apply_search_filter_recurisvely with the children of item.
+            f_recursive_item_eval {
+                [&](auto iter_item) -> void {
+                    auto iter_item_children { collectTreeChildren(iter_item) };
+
+                    if(iter_item->text(0).contains(search_filter, Qt::CaseInsensitive)) {
+                        f_expand_and_unhide_parent(iter_item);
+                        f_unhide_item(iter_item);
+                        f_expand_item(iter_item);
+
+                        std::for_each(iter_item_children.begin(), iter_item_children.end(), f_unhide_item);
+                    }
+
+                    apply_search_filter_recursively(iter_item_children);
+                }
+            };
+
+            // Apply f_recursive_item_eval over initial sequence of items, starting the recursion.
+            std::for_each(items.begin(), items.end(), f_recursive_item_eval);
+        };
+
+        apply_search_filter_recursively(collectTreeRoot(tree));
+    }
+
+    else if(searchExpansions.size()) {
+        setAllTopLevelItemsHidden(false);
+
+        for(auto expanded_tree_item : searchExpansions) {
+            expanded_tree_item->setExpanded(false);
+        }
+
+        searchExpansions.clear();
+    }
+}
+
 void WindowTreeDialog::integrateProcessInfoIntoTree(ProcessScanner::ProcessInfo process_info) {
     QDebugConsoleContext dbg_console_context { dbgConsole, "integrateProcessInfoIntoTree" };
 
-    auto* tree = ui->trwWindowTree;
-    QTreeWidgetItem* existing_root_item { nullptr };
+    auto tree        { ui->trwWindowTree };
+    auto root_items  { collectTreeRoot(tree) };
 
-    for(auto iter_root_item : collectTreeRoot(tree)) {
-        if(iter_root_item->text(1) == process_info.ProcessId) {
-            existing_root_item = iter_root_item;
-            break;
-        }
-    }
+    auto existing_root_item {
+        std::find_if(root_items.begin(), root_items.end(), [&](QTreeWidgetItem* item) -> bool {
+            return item->text(1) == process_info.ProcessId;
+        })
+    };
 
-    // If item is unique, add it to the tree.
-    if(existing_root_item == nullptr) {
+    if(existing_root_item == root_items.end()) {
         auto new_root_item { process_info.MakeRootItem() };
 
-        // Whitelist the new root item, to prevent it from being deleted when the scan is finished.
         rootItemRemovalWhitelist.append(new_root_item);
         tree->addTopLevelItem(new_root_item);
 
         childItemRemovalWhitelist += collectTreeChildren(new_root_item);
-    }
+    } else {
+        rootItemRemovalWhitelist.append(*existing_root_item);
 
-    // If it already exists, check to see if children differ.
-    else {
-        // Whitelist the existing root item, to prevent it from being deleted when the scan is finished.
-        rootItemRemovalWhitelist.append(existing_root_item);
+        auto existing_children  { collectTreeChildren(*existing_root_item)  };
 
-        for(auto process_window : process_info.ProcessWindows) {
-            QTreeWidgetItem* existing_child_item { nullptr };
+        for(auto& process_window : process_info.ProcessWindows) {
+            auto existing_child_item {
+                std::find_if(existing_children.begin(), existing_children.end(), [&](auto iter_e) -> bool {
+                    return iter_e->text(1) == process_window.WindowHash;
+                })
+            };
 
-            for(auto iter_child_item : collectTreeChildren(existing_root_item)) {
-                if(iter_child_item->text(1) == process_window.WindowHash) {
-                    existing_child_item = iter_child_item;
-                    break;
-                }
-            }
-
-            if(existing_child_item == nullptr) {
+            if(existing_child_item == existing_children.end()) {
                 auto new_child_item { process_window.MakeChildItem() };
                 childItemRemovalWhitelist.append(new_child_item);
-                existing_root_item->addChild(new_child_item);
+                (*existing_root_item)->addChild(new_child_item);
             } else {
-                childItemRemovalWhitelist.append(existing_child_item);
+                childItemRemovalWhitelist.append(*existing_child_item);
 
-                if(existing_child_item->text(2) != process_window.WindowVisibility) {
-                    existing_child_item->setText(2, process_window.WindowVisibility);
+                if((*existing_child_item)->text(2) != process_window.WindowVisibility) {
+                    (*existing_child_item)->setText(2, process_window.WindowVisibility);
+                }
+
+                if((*existing_child_item)->text(0) != process_window.WindowTitle) {
+                    (*existing_child_item)->setText(0, process_window.WindowTitle);
                 }
             }
         }
@@ -93,10 +175,9 @@ void WindowTreeDialog::integrateProcessInfoIntoTree(ProcessScanner::ProcessInfo 
 void WindowTreeDialog::applyWhitelistToTree() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "applyWhitelistToTree" };
 
-    auto* tree = ui->trwWindowTree;
+    auto tree { ui->trwWindowTree     };
 
     for(auto iter_root_item : collectTreeRoot(tree)) {
-
         if(!rootItemRemovalWhitelist.contains(iter_root_item)) {
             dbgConsole->log({"Deleting root item: ", iter_root_item->text(0)});
             delete iter_root_item;
@@ -122,6 +203,8 @@ void WindowTreeDialog::onProcessScannerScanStarted() {
 
 void WindowTreeDialog::onProcessScannerScanFinished() {
     applyWhitelistToTree();
+    applySearchFilterToTree();
+
     ui->btnScan->setText("Scan Processes");
     ui->btnScan->setEnabled(true);
     scannerCurrentlyScanning = false;
@@ -131,10 +214,9 @@ void WindowTreeDialog::emitFilteredProcessScannerScanRequest() {
     if(scannerCurrentlyScanning) return;
 
     QDebugConsoleContext { dbgConsole, "(filteredProcessScanRequest)" };
-
     dbgConsole->log("Filtered process scan has been requested.");
 
-    uint32_t scan_filters = NULL;
+    uint32_t scan_filters { ProcessScanner::FILTER_WINDOWLESS_PROCESSES };
 
     if(ui->cbFilterInvisibleWindows->isChecked()) {
         scan_filters |= ProcessScanner::FILTER_INVISIBLE_WINDOWS;
@@ -155,7 +237,7 @@ void WindowTreeDialog::emitFilteredProcessScannerScanRequest() {
         dbgConsole->log("No scan filters have been provided.");
     }
 
-    emit requestProcessScannerScan(static_cast<ProcessScanner::SCAN_FILTERS>(scan_filters));
+    emit requestProcessScannerScan(ProcessScanner::SCAN_SCOPE::PROCESSES_AND_WINDOWS, static_cast<ProcessScanner::SCAN_FILTERS>(scan_filters));
 }
 
 void WindowTreeDialog::onAutoScannerTimerTimeout() {
@@ -189,7 +271,6 @@ void WindowTreeDialog::showTreeWidgetContextMenu(const QPoint& point) {
     const QPoint global_point { ui->trwWindowTree->mapToGlobal(point) };
     treeWidgetContextMenu->popup(global_point);
 }
-
 
 WindowTreeDialog::WindowTreeDialog(QWidget *parent)
     :
@@ -249,7 +330,7 @@ WindowTreeDialog::WindowTreeDialog(QWidget *parent)
 
     // Search Filter Signal -----------------------------------------------------------------------
     connect(ui->linSearchFilter,        SIGNAL(textChanged(QString)),
-            this,                       SLOT(applyFiltersToTree()));
+            this,                       SLOT(applySearchFilterToTree()));
 
     // Item Selection Signals ---------------------------------------------------------------------
     connect(ui->btnOkay,                SIGNAL(clicked()),
@@ -259,8 +340,8 @@ WindowTreeDialog::WindowTreeDialog(QWidget *parent)
             this,                       SLOT(evaluateWindowTreeItemSelection()));
 
     // ProcessScanner Signals  --------------------------------------------------------------------
-    connect(this,                       SIGNAL(requestProcessScannerScan(ProcessScanner::SCAN_FILTERS)),
-            &processScanner,            SLOT(PerformScan(ProcessScanner::SCAN_FILTERS)));
+    connect(this,                       SIGNAL(requestProcessScannerScan(ProcessScanner::SCAN_SCOPE, ProcessScanner::SCAN_FILTERS)),
+            &processScanner,            SLOT(PerformScan(ProcessScanner::SCAN_SCOPE, ProcessScanner::SCAN_FILTERS)));
 
     connect(ui->btnScan,                SIGNAL(clicked()),
             this,                       SLOT(emitFilteredProcessScannerScanRequest()));

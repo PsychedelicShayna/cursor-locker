@@ -17,7 +17,7 @@ void QDebugConsole::InsertIntoTextEdit(const QPair<QPair<LOG_LEVEL, QString>, QS
         ll_resolver.contains(log_level) ?
                     ll_resolver[log_level] : "UNKNOWN" };
 
-    insertPlainText(context.size() ? ll_string + "(" + context + ") " : ll_string + message);
+    insertPlainText((context.size() ? ll_string + "(" + context + ") " : ll_string) + message);
     verticalScrollBar()->setValue(verticalScrollBar()->maximum());
 }
 

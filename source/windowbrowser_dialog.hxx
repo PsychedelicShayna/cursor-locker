@@ -10,6 +10,8 @@
 #include <QAction>
 #include <QMenu>
 
+// #include <functional>
+
 #include <QThread>
 #include <QTimer>
 
@@ -26,7 +28,7 @@ class WindowTreeDialog : public QDialog {
 Q_OBJECT
 
 signals:
-    void requestProcessScannerScan(ProcessScanner::SCAN_FILTERS);
+    void requestProcessScannerScan(ProcessScanner::SCAN_SCOPE, ProcessScanner::SCAN_FILTERS);
 
     // Emitted whenever the user chooses a window from the process/window tree.
     void processWindowChosen(const QString&);
@@ -55,13 +57,18 @@ private:
     // Helper functions to collect QTreeWidgetItem*'s into QList's
     QList<QTreeWidgetItem*> collectTreeRoot(QTreeWidget*);
     QList<QTreeWidgetItem*> collectTreeChildren(QTreeWidgetItem*);
+
+    template<typename T>
+    void applyFuncToQList(QList<T> list, std::function<void(T&)> func) {
+        std::for_each(list.begin(), list.end(), func);
+    }
+
     void setAllTopLevelItemsHidden(bool);
 
 private slots:
-    void applyFiltersToTree();
-    void applyWhitelistToTree();
-    void addWindowVisCheckboxesToTree();
+    void applySearchFilterToTree();
     void integrateProcessInfoIntoTree(ProcessScanner::ProcessInfo);
+    void applyWhitelistToTree();
 
     void emitFilteredProcessScannerScanRequest();
     void onProcessScannerScanStarted();

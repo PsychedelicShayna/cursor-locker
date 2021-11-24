@@ -94,7 +94,7 @@ QString ProcessScanner::getHwndHash(HWND hwnd) {
     return hexdigest;
 }
 
-void ProcessScanner::PerformScan(ProcessScanner::SCAN_FILTERS filters) {
+void ProcessScanner::PerformScan(ProcessScanner::SCAN_SCOPE scope, ProcessScanner::SCAN_FILTERS filters) {
     emit ScanStarted();
 
     HANDLE process_snapshot { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
@@ -125,52 +125,58 @@ void ProcessScanner::PerformScan(ProcessScanner::SCAN_FILTERS filters) {
                 }
             }
 
-            HWND process_window { nullptr };
+            // Grab the process windows, if included in the scope.
+            if(scope & PROCESSES_AND_WINDOWS) {
+                HWND process_window { nullptr };
+                QList<QString> existing_window_titles;
 
-            QList<QString> existing_window_titles;
+                do {
+                    process_window = FindWindowEx(nullptr, process_window, nullptr, nullptr);
 
-            do {
-                process_window = FindWindowEx(nullptr, process_window, nullptr, nullptr);
+                    DWORD window_pid { NULL };
+                    GetWindowThreadProcessId(process_window, &window_pid);
 
-                DWORD window_pid { NULL };
-                GetWindowThreadProcessId(process_window, &window_pid);
+                    if(window_pid == process_entry.th32ProcessID) {
+                        BOOL window_visible { IsWindowVisible(process_window) };
 
-                if(window_pid == process_entry.th32ProcessID) {
-                    BOOL window_visible { IsWindowVisible(process_window) };
-
-                    if(filters & FILTER_INVISIBLE_WINDOWS && !window_visible) {
-                        continue;
-                    }
-
-                    char window_title_buffer[512];
-                    ZeroMemory(window_title_buffer, sizeof(window_title_buffer));
-
-                    int32_t bytes_written { GetWindowTextA(process_window, window_title_buffer, sizeof(window_title_buffer)) };
-
-                    if(bytes_written) {
-                        QString window_title { window_title_buffer };
-
-                        if(filters & FILTER_DUPLICATE_WINDOWS) {
-                            if(existing_window_titles.contains(window_title)) {
-                                continue;
-                            } else {
-                                existing_window_titles.append(window_title);
-                            }
+                        if(filters & FILTER_INVISIBLE_WINDOWS && !window_visible) {
+                            continue;
                         }
 
-                        process_information.ProcessWindows.emplace_back(window_title, getHwndHash(process_window), window_visible);
-                    }
-                }
-            } while(process_window != nullptr);
+                        char window_title_buffer[512];
+                        ZeroMemory(window_title_buffer, sizeof(window_title_buffer));
 
-            if(process_information.ProcessWindows.size()) {
+                        int32_t bytes_written { GetWindowTextA(process_window, window_title_buffer, sizeof(window_title_buffer)) };
+
+                        if(bytes_written) {
+                            QString window_title { window_title_buffer };
+
+                            if(filters & FILTER_DUPLICATE_WINDOWS) {
+                                if(existing_window_titles.contains(window_title)) {
+                                    continue;
+                                } else {
+                                    existing_window_titles.append(window_title);
+                                }
+                            }
+
+                            process_information.ProcessWindows.emplace_back(window_title, getHwndHash(process_window), window_visible);
+                        }
+                    }
+                } while(process_window != nullptr);
+            }
+
+            if(filters & FILTER_WINDOWLESS_PROCESSES) {
+                if(process_information.ProcessWindows.size()) {
+                    emit ProcessInformationReady(process_information);
+                }
+            } else {
                 emit ProcessInformationReady(process_information);
             }
+
         } while (Process32Next(process_snapshot, &process_entry));
     }
 
     CloseHandle(process_snapshot);
-
     emit ScanFinished();
 }
 

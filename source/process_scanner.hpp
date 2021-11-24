@@ -8,6 +8,7 @@
 #define WIN32_MEAN_AND_LEAN
 #endif
 
+
 #include <Windows.h>
 #include <TlHelp32.h>
 
@@ -39,10 +40,16 @@ public:
     };
 
     enum SCAN_FILTERS {
-        FILTER_DUPLICATE_WINDOWS    = 0b00000001,
-        FILTER_DUPLICATE_PROCESSES  = 0b00000010,
-        FILTER_INVISIBLE_WINDOWS    = 0b00000100,
-        FILTERS_DISABLED            = NULL
+        FILTER_DUPLICATE_WINDOWS      = 0b00000001,
+        FILTER_DUPLICATE_PROCESSES    = 0b00000010,
+        FILTER_INVISIBLE_WINDOWS      = 0b00000100,
+        FILTER_WINDOWLESS_PROCESSES   = 0b00001000,
+        FILTERS_DISABLED              = NULL
+    };
+
+    enum SCAN_SCOPE {
+        PROCESSES_AND_WINDOWS         = 0b00000001,
+        JUST_PROCESSES                = 0b00000010
     };
 
 signals:
@@ -54,7 +61,7 @@ private:
     QString getHwndHash(HWND);
 
 public slots:
-    void PerformScan(ProcessScanner::SCAN_FILTERS);
+    void PerformScan(ProcessScanner::SCAN_SCOPE, ProcessScanner::SCAN_FILTERS);
 
     /* Deletes an object that was allocated within this class, in case of multithreading.
      * This is needed because this class is intended to be passed into a QThread, and so

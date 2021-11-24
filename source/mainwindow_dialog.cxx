@@ -670,7 +670,7 @@ MainWindow::MainWindow(QWidget* parent)
     cbxHotkeyModifier->setHidden(true);
     cbxHotkeyModifier->setMinimumWidth(75);
 
-    btnGrabForegroundWindow = new QPushButton(" Select ", this);
+    btnGrabForegroundWindow = new QPushButton("Select", this);
     btnGrabForegroundWindow->setEnabled(false);
     btnGrabForegroundWindow->setHidden(true);
 
