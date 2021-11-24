@@ -48,8 +48,8 @@ public:
     };
 
     enum SCAN_SCOPE {
-        PROCESSES_AND_WINDOWS         = 0b00000001,
-        JUST_PROCESSES                = 0b00000010
+        PROCESS_MODE         = 0b00000001,
+        WINDOW_MODE          = 0b00000010
     };
 
 signals:

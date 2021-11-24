@@ -334,6 +334,15 @@ void MainWindow::changeActivationMethod(int method_index) {
         btnGrabForegroundWindow->setHidden(true);
     }
 
+    if(btnGrabProcessImage != nullptr) {
+        if(btnGrabProcessImage->layout() == ui->hlActivationParameter) {
+            ui->hlActivationParameter->removeWidget(btnGrabProcessImage);
+        }
+
+        btnGrabProcessImage->setEnabled(false);
+        btnGrabProcessImage->setHidden(true);
+    }
+
     logToConsole("--------------------------------------------------");
 
     switch(method_index) {
@@ -381,6 +390,10 @@ void MainWindow::changeActivationMethod(int method_index) {
         if(targetProcessImageName.size()) {
             ui->linActivationParameter->setText(QString { targetProcessImageName });
         }
+
+        btnGrabProcessImage->setHidden(false);
+        btnGrabProcessImage->setEnabled(true);
+        ui->hlActivationParameter->insertWidget(0, btnGrabProcessImage, 0);
 
         break;
     }
@@ -561,28 +574,40 @@ void MainWindow::startForegroundWindowGrabber() {
     }
 }
 
-void MainWindow::spawnWindowTreeDialog() {
-    static WindowTreeDialog* window_tree_dialog { nullptr };
+void MainWindow::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE process_scanner_scope) {
+    static ProcessScannerDialog* process_scanner_dialog { nullptr };
 
-    if(window_tree_dialog == nullptr) {
-        window_tree_dialog = new WindowTreeDialog(this);
-        window_tree_dialog->setAttribute(Qt::WA_DeleteOnClose);
+    if(process_scanner_dialog == nullptr) {
+        process_scanner_dialog = new ProcessScannerDialog(process_scanner_scope, this);
+        process_scanner_dialog->setAttribute(Qt::WA_DeleteOnClose);
+        ui->btnEditActivationParameter->setEnabled(false);
+        ui->cbxActivationMethod->setEnabled(false);
 
-        connect(window_tree_dialog, &WindowTreeDialog::destroyed, [](QObject*) -> void {
-            window_tree_dialog = nullptr;
+        connect(process_scanner_dialog, &ProcessScannerDialog::destroyed, [&](QObject*) -> void {
+            ui->btnEditActivationParameter->setEnabled(true);
+            ui->cbxActivationMethod->setEnabled(true);
+            process_scanner_dialog = nullptr;
         });
 
-        connect(window_tree_dialog, &WindowTreeDialog::processWindowChosen, [this](const QString& window_title) -> void {
-            ui->linActivationParameter->setText(window_title);
-            targetForegroundWindowTitle = window_title;
-            delete window_tree_dialog;
-            window_tree_dialog = nullptr;
+        // connect(process_scanner_dialog, &ProcessScannerDialog::)
+
+        connect(process_scanner_dialog, &ProcessScannerDialog::treeSelectionMade, [&](const QString& selection) -> void {
+            ui->linActivationParameter->setText(selection);
+
+            if(selectedActivationMethod == ACTIVATION_METHOD::WINDOW_TITLE) {
+                targetForegroundWindowTitle = selection;
+            } else if(selectedActivationMethod == ACTIVATION_METHOD::PROCESS_IMAGE) {
+                targetProcessImageName = selection;
+            }
+
+            delete process_scanner_dialog;
+            process_scanner_dialog = nullptr;
         });
     }
 
-    logToConsole("Called WindowTreeDialog::show");
+    logToConsole("Called ProcessScannerDialog::show");
 
-    window_tree_dialog->show();
+    process_scanner_dialog->show();
 }
 
 void MainWindow::toggleMuteBeepBoop() {
@@ -670,7 +695,11 @@ MainWindow::MainWindow(QWidget* parent)
     cbxHotkeyModifier->setHidden(true);
     cbxHotkeyModifier->setMinimumWidth(75);
 
-    btnGrabForegroundWindow = new QPushButton("Select", this);
+    btnGrabProcessImage = new QPushButton { "Select", this };
+    btnGrabProcessImage->setEnabled(false);
+    btnGrabProcessImage->setHidden(true);
+
+    btnGrabForegroundWindow = new QPushButton { "Select", this };
     btnGrabForegroundWindow->setEnabled(false);
     btnGrabForegroundWindow->setHidden(true);
 
@@ -695,9 +724,14 @@ MainWindow::MainWindow(QWidget* parent)
     connect(cbxHotkeyModifier,                      SIGNAL(currentIndexChanged(int)),
             this,                                   SLOT(changeHotkeyModifier(int)));
 
-    connect(btnGrabForegroundWindow,                SIGNAL(clicked()),
-            this,                                   SLOT(spawnWindowTreeDialog()));
+    // connect(btnGrabForegroundWindow,                SIGNAL(clicked()),
+    //         this,                                   SLOT(spawnProcessScannerDialog()));
 
+    connect(btnGrabForegroundWindow, &QPushButton::clicked,
+            std::bind(&MainWindow::spawnProcessScannerDialog, this, ProcessScanner::WINDOW_MODE));
+
+    connect(btnGrabProcessImage, &QPushButton::clicked,
+            std::bind(&MainWindow::spawnProcessScannerDialog, this, ProcessScanner::PROCESS_MODE));
 
     // Load JSON Defaults
     // --------------------------------------------------

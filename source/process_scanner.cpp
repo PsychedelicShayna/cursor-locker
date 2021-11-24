@@ -126,7 +126,7 @@ void ProcessScanner::PerformScan(ProcessScanner::SCAN_SCOPE scope, ProcessScanne
             }
 
             // Grab the process windows, if included in the scope.
-            if(scope & PROCESSES_AND_WINDOWS) {
+            if(scope & WINDOW_MODE) {
                 HWND process_window { nullptr };
                 QList<QString> existing_window_titles;
 

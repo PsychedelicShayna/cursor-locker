@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>WindowTreeDialog</class>
- <widget class="QDialog" name="WindowTreeDialog">
+ <class>ProcessScannerDialog</class>
+ <widget class="QDialog" name="ProcessScannerDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -24,7 +24,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QTreeWidget" name="trwWindowTree">
+      <widget class="QTreeWidget" name="twProcessTree">
        <property name="contextMenuPolicy">
         <enum>Qt::CustomContextMenu</enum>
        </property>

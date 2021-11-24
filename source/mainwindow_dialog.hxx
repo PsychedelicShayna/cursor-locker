@@ -27,7 +27,7 @@
 #include <string>
 #include <tuple>
 
-#include "windowbrowser_dialog.hxx"
+#include "process_scanner_dialog.hxx"
 
 #include "json.hxx"
 using Json = nlohmann::json;
@@ -91,9 +91,10 @@ private:
     QComboBox* cbxHotkeyModifier;     // A QComboBox to select a modifier for the hotkey, that gets dynamically added to the layout when hotkey mode is selected.
 
     QString targetProcessImageName;         // The target process image name, used for the process image activation method.
+    QPushButton* btnGrabProcessImage;       // A button that calls spawnProcessScannerDialog with PROCESS_MODE as the scope, that gets dynamically added to the layout when the process image mode is selected,
 
     QString targetForegroundWindowTitle;    // The target window title, used for the window title activation method.
-    QPushButton* btnGrabForegroundWindow;   // A button to start the foreground window grabber, that gets dynamically added to the layout when window title mode is selected.
+    QPushButton* btnGrabForegroundWindow;   // A button to start calls spawnProcessScannerDialog with WINDOW_MODE as the scope, that gets dynamically added to the layout when window title mode is selected.
 
     // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
     // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.
@@ -141,7 +142,7 @@ private slots:
     void startForegroundWindowGrabber(); //////
     // - - - - - - - - - - - - - - - - - - ///
 
-    void spawnWindowTreeDialog();
+    void spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE);
 
     // Connected in constructor to btn_mutebeepboop's clicked() signal.
     void toggleMuteBeepBoop();

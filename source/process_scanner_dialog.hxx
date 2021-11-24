@@ -21,20 +21,20 @@
 #include "process_scanner.hpp"
 
 namespace Ui {
-    class WindowTreeDialog;
+    class ProcessScannerDialog;
 }
 
-class WindowTreeDialog : public QDialog {
+class ProcessScannerDialog : public QDialog {
 Q_OBJECT
 
 signals:
     void requestProcessScannerScan(ProcessScanner::SCAN_SCOPE, ProcessScanner::SCAN_FILTERS);
 
     // Emitted whenever the user chooses a window from the process/window tree.
-    void processWindowChosen(const QString&);
+    void treeSelectionMade(const QString&);
 
 private:
-    Ui::WindowTreeDialog*           ui;
+    Ui::ProcessScannerDialog*           ui;
 
     // Debug console, and related widgets.
     QDebugConsole*                  dbgConsole;
@@ -47,7 +47,9 @@ private:
     uint32_t                        autoScannerInterval;            // The default auto-scan interval for the ProcessScanner QTimer.
 
     bool                            scannerCurrentlyScanning;       // True when ProcessScanner is scanning, false when not. Determined by start/finished signals.
+
     ProcessScanner                  processScanner;                 // The ProcessScanner instance tasked with WinAPI process scanning.
+    ProcessScanner::SCAN_SCOPE      processScannerScope;            // The scope of the ProcessScanner instance (what to scan for).
     QThread                         processScannerThread;           // The thread that the ProcessScanner instance will run on.
 
     QList<QTreeWidgetItem*>         rootItemRemovalWhitelist;
@@ -79,8 +81,8 @@ private slots:
     void showTreeWidgetContextMenu(const QPoint& point);
 
 public:
-    explicit WindowTreeDialog(QWidget* parent = nullptr);
-    ~WindowTreeDialog() override;
+    explicit ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE&, QWidget* parent = nullptr);
+    ~ProcessScannerDialog() override;
 
 };
 

@@ -1,8 +1,8 @@
-#include "windowbrowser_dialog.hxx"
-#include "ui_windowbrowser_dialog.h"
+#include "process_scanner_dialog.hxx"
+#include "ui_process_scanner_dialog.h"
 
 
-QList<QTreeWidgetItem*> WindowTreeDialog::collectTreeRoot(QTreeWidget* tree) {
+QList<QTreeWidgetItem*> ProcessScannerDialog::collectTreeRoot(QTreeWidget* tree) {
     QList<QTreeWidgetItem*> root_items_list;
     root_items_list.reserve(tree->topLevelItemCount());
 
@@ -13,7 +13,7 @@ QList<QTreeWidgetItem*> WindowTreeDialog::collectTreeRoot(QTreeWidget* tree) {
     return root_items_list;
 }
 
-QList<QTreeWidgetItem*> WindowTreeDialog::collectTreeChildren(QTreeWidgetItem* root_item) {
+QList<QTreeWidgetItem*> ProcessScannerDialog::collectTreeChildren(QTreeWidgetItem* root_item) {
     QList<QTreeWidgetItem*> child_items_list;
     child_items_list.reserve(root_item->childCount());
 
@@ -24,8 +24,8 @@ QList<QTreeWidgetItem*> WindowTreeDialog::collectTreeChildren(QTreeWidgetItem* r
     return child_items_list;
 }
 
-void WindowTreeDialog::setAllTopLevelItemsHidden(bool hidden) {
-    auto* tree { ui->trwWindowTree };
+void ProcessScannerDialog::setAllTopLevelItemsHidden(bool hidden) {
+    auto* tree { ui->twProcessTree };
 
     for(auto iter_root_item : collectTreeRoot(tree)) {
         iter_root_item->setHidden(hidden);
@@ -36,11 +36,11 @@ void WindowTreeDialog::setAllTopLevelItemsHidden(bool hidden) {
     }
 }
 
-void WindowTreeDialog::applySearchFilterToTree() {
+void ProcessScannerDialog::applySearchFilterToTree() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "applySearchFilterToTree" };
 
     auto search_filter  { ui->linSearchFilter->text() };
-    auto tree           { ui->trwWindowTree };
+    auto tree           { ui->twProcessTree };
 
     setAllTopLevelItemsHidden(search_filter.size());
 
@@ -122,10 +122,10 @@ void WindowTreeDialog::applySearchFilterToTree() {
     }
 }
 
-void WindowTreeDialog::integrateProcessInfoIntoTree(ProcessScanner::ProcessInfo process_info) {
+void ProcessScannerDialog::integrateProcessInfoIntoTree(ProcessScanner::ProcessInfo process_info) {
     QDebugConsoleContext dbg_console_context { dbgConsole, "integrateProcessInfoIntoTree" };
 
-    auto tree        { ui->trwWindowTree };
+    auto tree        { ui->twProcessTree };
     auto root_items  { collectTreeRoot(tree) };
 
     auto existing_root_item {
@@ -144,38 +144,40 @@ void WindowTreeDialog::integrateProcessInfoIntoTree(ProcessScanner::ProcessInfo 
     } else {
         rootItemRemovalWhitelist.append(*existing_root_item);
 
-        auto existing_children  { collectTreeChildren(*existing_root_item)  };
+        if(processScannerScope & ProcessScanner::WINDOW_MODE)  {
+            auto existing_children  { collectTreeChildren(*existing_root_item)  };
 
-        for(auto& process_window : process_info.ProcessWindows) {
-            auto existing_child_item {
-                std::find_if(existing_children.begin(), existing_children.end(), [&](auto iter_e) -> bool {
-                    return iter_e->text(1) == process_window.WindowHash;
-                })
-            };
+            for(auto& process_window : process_info.ProcessWindows) {
+                auto existing_child_item {
+                    std::find_if(existing_children.begin(), existing_children.end(), [&](auto iter_e) -> bool {
+                        return iter_e->text(1) == process_window.WindowHash;
+                    })
+                };
 
-            if(existing_child_item == existing_children.end()) {
-                auto new_child_item { process_window.MakeChildItem() };
-                childItemRemovalWhitelist.append(new_child_item);
-                (*existing_root_item)->addChild(new_child_item);
-            } else {
-                childItemRemovalWhitelist.append(*existing_child_item);
+                if(existing_child_item == existing_children.end()) {
+                    auto new_child_item { process_window.MakeChildItem() };
+                    childItemRemovalWhitelist.append(new_child_item);
+                    (*existing_root_item)->addChild(new_child_item);
+                } else {
+                    childItemRemovalWhitelist.append(*existing_child_item);
 
-                if((*existing_child_item)->text(2) != process_window.WindowVisibility) {
-                    (*existing_child_item)->setText(2, process_window.WindowVisibility);
-                }
+                    if((*existing_child_item)->text(2) != process_window.WindowVisibility) {
+                        (*existing_child_item)->setText(2, process_window.WindowVisibility);
+                    }
 
-                if((*existing_child_item)->text(0) != process_window.WindowTitle) {
-                    (*existing_child_item)->setText(0, process_window.WindowTitle);
+                    if((*existing_child_item)->text(0) != process_window.WindowTitle) {
+                        (*existing_child_item)->setText(0, process_window.WindowTitle);
+                    }
                 }
             }
         }
     }
 }
 
-void WindowTreeDialog::applyWhitelistToTree() {
+void ProcessScannerDialog::applyWhitelistToTree() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "applyWhitelistToTree" };
 
-    auto tree { ui->trwWindowTree     };
+    auto tree { ui->twProcessTree     };
 
     for(auto iter_root_item : collectTreeRoot(tree)) {
         if(!rootItemRemovalWhitelist.contains(iter_root_item)) {
@@ -192,7 +194,7 @@ void WindowTreeDialog::applyWhitelistToTree() {
     }
 }
 
-void WindowTreeDialog::onProcessScannerScanStarted() {
+void ProcessScannerDialog::onProcessScannerScanStarted() {
     ui->btnScan->setText("Scanning...");
     ui->btnScan->setEnabled(false);
     scannerCurrentlyScanning = true;
@@ -201,7 +203,7 @@ void WindowTreeDialog::onProcessScannerScanStarted() {
     childItemRemovalWhitelist.clear();
 }
 
-void WindowTreeDialog::onProcessScannerScanFinished() {
+void ProcessScannerDialog::onProcessScannerScanFinished() {
     applyWhitelistToTree();
     applySearchFilterToTree();
 
@@ -210,13 +212,13 @@ void WindowTreeDialog::onProcessScannerScanFinished() {
     scannerCurrentlyScanning = false;
 }
 
-void WindowTreeDialog::emitFilteredProcessScannerScanRequest() {
+void ProcessScannerDialog::emitFilteredProcessScannerScanRequest() {
     if(scannerCurrentlyScanning) return;
 
     QDebugConsoleContext { dbgConsole, "(filteredProcessScanRequest)" };
     dbgConsole->log("Filtered process scan has been requested.");
 
-    uint32_t scan_filters { ProcessScanner::FILTER_WINDOWLESS_PROCESSES };
+    int32_t scan_filters { (processScannerScope & ProcessScanner::PROCESS_MODE) ? NULL : ProcessScanner::FILTER_WINDOWLESS_PROCESSES };
 
     if(ui->cbFilterInvisibleWindows->isChecked()) {
         scan_filters |= ProcessScanner::FILTER_INVISIBLE_WINDOWS;
@@ -237,10 +239,10 @@ void WindowTreeDialog::emitFilteredProcessScannerScanRequest() {
         dbgConsole->log("No scan filters have been provided.");
     }
 
-    emit requestProcessScannerScan(ProcessScanner::SCAN_SCOPE::PROCESSES_AND_WINDOWS, static_cast<ProcessScanner::SCAN_FILTERS>(scan_filters));
+    emit requestProcessScannerScan(processScannerScope, static_cast<ProcessScanner::SCAN_FILTERS>(scan_filters));
 }
 
-void WindowTreeDialog::onAutoScannerTimerTimeout() {
+void ProcessScannerDialog::onAutoScannerTimerTimeout() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "AutoScannerTimeout" };
 
     emitFilteredProcessScannerScanRequest();
@@ -254,41 +256,41 @@ void WindowTreeDialog::onAutoScannerTimerTimeout() {
     }
 }
 
-void WindowTreeDialog::evaluateWindowTreeItemSelection() {
-    auto tree { ui->trwWindowTree };
+void ProcessScannerDialog::evaluateWindowTreeItemSelection() {
+    auto tree { ui->twProcessTree };
     auto selected_items { tree->selectedItems() };
 
     if(selected_items.size()) {
         auto selected_item { selected_items.first() };
 
-        if(!selected_item->isHidden() && !selected_item->childCount()) {
-            emit processWindowChosen(selected_item->text(0));
+        if(!selected_item->isHidden() && (!selected_item->childCount() || processScannerScope & ProcessScanner::PROCESS_MODE)) {
+            emit treeSelectionMade(selected_item->text(0));
         }
     }
 }
 
-void WindowTreeDialog::showTreeWidgetContextMenu(const QPoint& point) {
-    const QPoint global_point { ui->trwWindowTree->mapToGlobal(point) };
+void ProcessScannerDialog::showTreeWidgetContextMenu(const QPoint& point) {
+    const QPoint global_point { ui->twProcessTree->mapToGlobal(point) };
     treeWidgetContextMenu->popup(global_point);
 }
 
-WindowTreeDialog::WindowTreeDialog(QWidget *parent)
+ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& scan_scope, QWidget* parent)
     :
-      // WindowTreeDialog Ui initialization.
-      QDialog               { parent },
-      ui                    { new Ui::WindowTreeDialog   },
+      // ProcessScannerDialog Ui initialization.
+      QDialog               { parent                       },
+      ui                    { new Ui::ProcessScannerDialog },
 
       // Debug console & related widgets initialization.
       dbgConsole            { new QDebugConsole { this } },
-      grpConsole            { new QGroupBox },
-      splConsole            { new QSplitter },
-
-      treeWidgetContextMenu { new QMenu { this } },
+      grpConsole            { new QGroupBox              },
+      splConsole            { new QSplitter              },
+      treeWidgetContextMenu { new QMenu { this }         },
 
       // Member variable initialization.
       autoScannerTimer          { new QTimer },
-      autoScannerInterval       { 2500 },
-      scannerCurrentlyScanning  { false }
+      autoScannerInterval       { 2500       },
+      scannerCurrentlyScanning  { false      },
+      processScannerScope       { scan_scope }
 {
     ui->setupUi(this);
 
@@ -299,7 +301,7 @@ WindowTreeDialog::WindowTreeDialog(QWidget *parent)
     grpConsole->setTitle("Debug Console");
 
     splConsole->setOrientation(Qt::Orientation::Vertical);
-    splConsole->addWidget(ui->trwWindowTree);
+    splConsole->addWidget(ui->twProcessTree);
     splConsole->addWidget(grpConsole);
 
     splConsole->setCollapsible(0, false);
@@ -312,20 +314,48 @@ WindowTreeDialog::WindowTreeDialog(QWidget *parent)
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
     // Set initial tree widget header section sizes.
-    ui->trwWindowTree->header()->resizeSection(0, 250);
-    ui->trwWindowTree->header()->resizeSection(1, 130);
-    ui->trwWindowTree->header()->resizeSection(2, 40);
+    ui->twProcessTree->header()->resizeSection(0, 250);
+    ui->twProcessTree->header()->resizeSection(1, 130);
+    ui->twProcessTree->header()->resizeSection(2, 40);
+
+    switch(processScannerScope) {
+    case(ProcessScanner::PROCESS_MODE) : {
+        // When scannig for processes, hide window-related filters.
+        ui->cbFilterDuplicateWindows->setHidden(true);
+        ui->cbFilterInvisibleWindows->setHidden(true);
+
+        // Interval can be lower when only scanning for processes, as less resources are consumed.
+        ui->hsAutoScannerInterval->setMinimum(500);
+        ui->sbAutoScannerInterval->setMinimum(500);
+        ui->sbAutoScannerInterval->setValue(1000);
+        ui->hsAutoScannerInterval->setValue(1000);
+        autoScannerInterval = 1000;
+
+        ui->cbFilterDuplicateProcesses->setChecked(true);
+
+        break;
+    }
+
+    case(ProcessScanner::WINDOW_MODE) : {
+        // When scanning for windows, set initial filter.
+        ui->cbFilterInvisibleWindows->setChecked(true);
+        ui->cbFilterDuplicateWindows->setChecked(true);
+        break;
+    }
+    }
+
+    // ui->cbFilterDuplicateWindowsbtn
 
     // Context Menu Signals -----------------------------------------------------------------------
-    connect(ui->trwWindowTree,          SIGNAL(customContextMenuRequested(const QPoint&)),
+    connect(ui->twProcessTree,          SIGNAL(customContextMenuRequested(const QPoint&)),
             this,                       SLOT(showTreeWidgetContextMenu(const QPoint&)));
 
     connect(treeWidgetContextMenu->addAction("Expand All"), &QAction::triggered, [this]() -> void {
-        ui->trwWindowTree->expandAll();
+        ui->twProcessTree->expandAll();
     });
 
     connect(treeWidgetContextMenu->addAction("Collapse All"), &QAction::triggered, [this]() -> void {
-        ui->trwWindowTree->collapseAll();
+        ui->twProcessTree->collapseAll();
     });
 
     // Search Filter Signal -----------------------------------------------------------------------
@@ -336,7 +366,7 @@ WindowTreeDialog::WindowTreeDialog(QWidget *parent)
     connect(ui->btnOkay,                SIGNAL(clicked()),
             this,                       SLOT(evaluateWindowTreeItemSelection()));
 
-    connect(ui->trwWindowTree,          SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)),
+    connect(ui->twProcessTree,          SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)),
             this,                       SLOT(evaluateWindowTreeItemSelection()));
 
     // ProcessScanner Signals  --------------------------------------------------------------------
@@ -349,7 +379,7 @@ WindowTreeDialog::WindowTreeDialog(QWidget *parent)
     connect(ui->btnCancel,              SIGNAL(clicked()),
             this,                       SLOT(close()));
 
-   connect(&processScannerThread,       SIGNAL(started()),
+    connect(&processScannerThread,       SIGNAL(started()),
            this,                        SLOT(emitFilteredProcessScannerScanRequest()));
 
     connect(&processScanner,            SIGNAL(ProcessInformationReady(ProcessScanner::ProcessInfo)),
@@ -378,15 +408,11 @@ WindowTreeDialog::WindowTreeDialog(QWidget *parent)
         autoScannerInterval = interval;
     });
 
-    // Set initial filter checkbox states, before thread is started.
-    ui->cbFilterInvisibleWindows->setChecked(true);
-    ui->cbFilterDuplicateWindows->setChecked(true);
-
     processScanner.moveToThread(&processScannerThread);     // Move the ProcessScanner instance to the QThread.
     processScannerThread.start();                           // Start the QThread attached to the instance.
 }
 
-WindowTreeDialog::~WindowTreeDialog() {
+ProcessScannerDialog::~ProcessScannerDialog() {
     autoScannerTimer->stop();
     ui->cbAutoScanner->setChecked(false);
     processScannerThread.quit();
