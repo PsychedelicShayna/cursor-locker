@@ -24,22 +24,14 @@ void QDebugConsole::InsertIntoTextEdit(const QPair<QPair<LOG_LEVEL, QString>, QS
 void QDebugConsole::RefreshAllLogMessages() {
     clear();
 
-    for(auto& message : logMessages) {
+    for(auto& message : LogMessages) {
         InsertIntoTextEdit(message);
     }
 }
 
-void QDebugConsole::SetContext(const QString& context) {
-    consoleContext = context;
-}
-
-void QDebugConsole::ClearContext() {
-    consoleContext.clear();
-}
-
 void QDebugConsole::log(const QString& message, LOG_LEVEL ll) {
-    const QPair<QPair<LOG_LEVEL, QString>, QString>& mpair { { ll, consoleContext }, message + '\n' };
-    logMessages.append(mpair);
+    const QPair<QPair<LOG_LEVEL, QString>, QString>& mpair { { ll, ConsoleContext }, message + '\n' };
+    LogMessages.append(mpair);
     emit MessageWasLogged(mpair);
 }
 
@@ -73,9 +65,9 @@ QDebugConsoleContext::QDebugConsoleContext(QDebugConsole* console, const QString
       ConsoleContext { consoleContext  },
       Console        { console         }
 {
-    Console->SetContext(console_context);
+    Console->ConsoleContext = console_context;
 }
 
 QDebugConsoleContext::~QDebugConsoleContext() {
-    Console->ClearContext();
+    Console->ConsoleContext.clear();
 }

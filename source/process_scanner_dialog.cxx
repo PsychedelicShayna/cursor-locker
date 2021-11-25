@@ -282,9 +282,10 @@ ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& sca
 
       // Debug console & related widgets initialization.
       dbgConsole            { new QDebugConsole { this } },
-      grpConsole            { new QGroupBox              },
-      splConsole            { new QSplitter              },
-      treeWidgetContextMenu { new QMenu { this }         },
+      grpConsole            { new QGroupBox     { this } },
+      splConsole            { new QSplitter     { this } },
+
+      treeWidgetContextMenu { new QMenu         { this } },
 
       // Member variable initialization.
       autoScannerTimer          { new QTimer },
@@ -295,7 +296,7 @@ ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& sca
     ui->setupUi(this);
 
     /* Initialize & Configure Debug Console * * * * * * * * * * * * */
-    QVBoxLayout* grpConsoleLayout { new QVBoxLayout(grpConsole) };
+    QVBoxLayout* grpConsoleLayout { new QVBoxLayout { grpConsole } };
     grpConsoleLayout->addWidget(dbgConsole);
     grpConsole->setLayout(grpConsoleLayout);
     grpConsole->setTitle("Debug Console");

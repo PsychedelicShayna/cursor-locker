@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QMenu>
+#include <QLine>
 
 #include <QTimer>
 #include <QPair>
@@ -27,10 +28,12 @@
 #include <string>
 #include <tuple>
 
+#include "qdebugconsole_widget.hpp"
 #include "process_scanner_dialog.hxx"
 
 #include "json.hxx"
 using Json = nlohmann::json;
+
 
 namespace Ui {
     class MainWindow;
@@ -39,20 +42,55 @@ namespace Ui {
 enum struct ACTIVATION_METHOD;
 enum struct HOTKEY_MOD;
 
-enum CONSOLE_LOG_LEVELS {
-    LL_INFO         = 0,
-    LL_WARNING      = 1,
-    LL_ERROR        = 2,
-    LL_EXCEPTION    = 3
-};
-
 class MainWindow : public QMainWindow {
-private:
-    Ui::MainWindow* ui;
-    Q_OBJECT
+Q_OBJECT
 
-    // Currently selected activation method, which activationConditionChecker will use to determine what condition to check.
-    ACTIVATION_METHOD selectedActivationMethod;
+private:
+    Ui::MainWindow*             ui;
+
+    QDebugConsole*              dbgConsole;
+    QVBoxLayout*                vblDebugConsoleLayout;
+
+    void                        insertActivationParameterWidget(QWidget*, bool enable=true, bool unhide=true);
+    void                        removeActivationParameterWidget(QWidget*, bool disable=true, bool hide=true);
+
+    /* QComboBox / dropdown that gets added dynamically to the left of the activation method parameter
+     * text field when the hotkey activation method is selected. Allows a modifier to be selected in
+     * conjunction with the hotkey VKID, e.g. Control, Alt, Shift, etc. Its value is stored as HOTKEY_MOD
+     * enum value, in the targetHotkeyModifier member variable, whenever the selection changes.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    QComboBox*                  cbxHotkeyModifier;
+    HOTKEY_MOD                  targetHotkeyModifier;  // The modifier associated with the VKID (e.g. control, alt, shift), used for the hotkey activation method.
+    const uint32_t              targetHotkeyId;    // The ID used by WinAPI to identify the registered hotkey, used for the hotkey activation method.
+    uint8_t                     targetHotkeyVkid;         // The virtual key ID that identifies the target key, used for the hotkey activation method.
+
+    /* This button is dynamically added and removed depending on the activation method. When either
+     * the window title or process image activation methods are selected, this button is inserted to
+     * the left of the activation method parameter text field by the changeActivationMethod(int) slot,
+     * which also connects the button to spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE) where
+     * the SCAN_SCOPE value is bound to WINDOW_MODE or PROCESS_MODE via std::bind, depending on the
+     * activation method that was selected when the changeActivationMethod(int) slot was called.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    ProcessScannerDialog*       processScannerDialog;
+    QPushButton*                btnSpawnProcessScanner;
+    QMetaObject::Connection     btnSpawnProcessScannerConnection;
+    QString                     targetProcessImageName;             // The target process image name, used for the process image activation method.
+    QString                     targetForegroundWindowTitle;        // The target window title, used for the window title activation method.
+
+    /* For activation methods that require a timer (window title & image name), the below timer
+     * will be used to call the member function associated with the activation method, by having
+     * its timeout signal connected to that member function, and that connection will be stored
+     * in the below QMetaObject::Connection instance, so that it can later be disconnected.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    QTimer*                     timedActivationMethodTimer;
+    QMetaObject::Connection     timedActivationMethodConnection;
+
+    /* Stores the currently selected activation method as an ENUM value. This can be reliably used
+     * all over the class to determine what the current activation method is, for method-specific
+     * functionality. It is set whenever the changeActivationMethod(int) SLOT is called, usually
+     * as a result of the activation method dropdown's value having been changed.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    ACTIVATION_METHOD           selectedActivationMethod;
 
     // Utility Functions
     // ----------------------------------------------------------------------------------------------------
@@ -65,17 +103,6 @@ private:
     // Stops beepBoop from functioning when enabled.
     bool muteBeepBoop;
 
-    // displayLogMessagesInConsole will display log messages equal to or higher to this message level.
-    CONSOLE_LOG_LEVELS minimumLogLevel;
-
-    QList<QPair<CONSOLE_LOG_LEVELS, QString>> logMessages;
-    void refreshConsoleLogMessages(bool just_add_latest = false);
-
-    // Functions to simplify logging messages to the UI's debug console.
-    void logToConsole(const QList<QString>& message_list, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
-    void logToConsole(const QString& message, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
-    void logToConsole(const char* message, CONSOLE_LOG_LEVELS loglevel = LL_INFO);
-
     RECT getForegroundWindowRect();  // Return the RECT of the current foreground window in Windows.
 
     void enableCursorLock();    // Enable the cursor lock by calling ClipCursor with getForegroundWindowRect.
@@ -84,17 +111,6 @@ private:
 
     bool registerTargetHotkey();    // Registers a WinAPI hotkey using targetHotkeyId and targetHotkeyVkid.
     bool unregisterTargetHotkey();  // Unregisters the hotkey previously registered with targetHotkeyId.
-
-    const uint32_t targetHotkeyId;    // The ID used by WinAPI to identify the registered hotkey, used for the hotkey activation method.
-    uint8_t targetHotkeyVkid;         // The virtual key ID that identifies the target key, used for the hotkey activation method.
-    HOTKEY_MOD targetHotkeyModifier;  // The modifier associated with the VKID (e.g. control, alt, shift), used for the hotkey activation method.
-    QComboBox* cbxHotkeyModifier;     // A QComboBox to select a modifier for the hotkey, that gets dynamically added to the layout when hotkey mode is selected.
-
-    QString targetProcessImageName;         // The target process image name, used for the process image activation method.
-    QPushButton* btnGrabProcessImage;       // A button that calls spawnProcessScannerDialog with PROCESS_MODE as the scope, that gets dynamically added to the layout when the process image mode is selected,
-
-    QString targetForegroundWindowTitle;    // The target window title, used for the window title activation method.
-    QPushButton* btnGrabForegroundWindow;   // A button to start calls spawnProcessScannerDialog with WINDOW_MODE as the scope, that gets dynamically added to the layout when window title mode is selected.
 
     // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
     // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.

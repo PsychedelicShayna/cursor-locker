@@ -26,100 +26,84 @@
    </size>
   </property>
   <widget class="QWidget" name="gdMain">
-   <layout class="QGridLayout" name="gridLayout_2">
+   <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,1">
     <item row="0" column="0">
-     <layout class="QVBoxLayout" name="vlMain">
-      <item>
-       <widget class="QGroupBox" name="vlActivation">
-        <property name="title">
-         <string>Activation Method</string>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
+     <widget class="QGroupBox" name="vlActivation">
+      <property name="title">
+       <string>Activation Method</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <layout class="QHBoxLayout" name="hlActivationMethod" stretch="5,0">
          <item>
-          <layout class="QHBoxLayout" name="hlActivationMethod" stretch="5,0">
-           <item>
-            <widget class="QComboBox" name="cbxActivationMethod">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>25</height>
-              </size>
-             </property>
-             <item>
-              <property name="text">
-               <string>Nothing</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Keybinding</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Process Image</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Window Title</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btnMuteBeepBoop">
-             <property name="text">
-              <string>Mute</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="hlActivationParameter" stretch="0,0">
-           <item>
-            <widget class="QLineEdit" name="linActivationParameter">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="placeholderText">
-              <string>No activation method selected</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btnEditActivationParameter">
-             <property name="text">
-              <string>Edit</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="vlConsole">
-        <property name="title">
-         <string>Debug Console</string>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <item>
-          <widget class="QPlainTextEdit" name="txtConsole">
-           <property name="contextMenuPolicy">
-            <enum>Qt::CustomContextMenu</enum>
+          <widget class="QComboBox" name="cbxActivationMethod">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>25</height>
+            </size>
            </property>
-           <property name="readOnly">
-            <bool>true</bool>
+           <item>
+            <property name="text">
+             <string>Nothing</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Keybinding</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Process Image</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Window Title</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnMuteBeepBoop">
+           <property name="text">
+            <string>Mute</string>
            </property>
           </widget>
          </item>
         </layout>
-       </widget>
-      </item>
-     </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="hlActivationParameter" stretch="0,0">
+         <item>
+          <widget class="QLineEdit" name="linActivationParameter">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="placeholderText">
+            <string>No activation method selected</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnEditActivationParameter">
+           <property name="text">
+            <string>Edit</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QGroupBox" name="grpDebugConsole">
+      <property name="title">
+       <string>Debug Console</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
