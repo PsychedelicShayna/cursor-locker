@@ -6,8 +6,16 @@
 #include <QObject>
 #include <QWidget>
 
+// Context menu widgets
+#include <QAction>
+#include <QMenu>
+
 class QDebugConsole : public QTextEdit {
 Q_OBJECT
+private:
+    QMenu*      contextMenu;             //
+    QAction*    cmActionClearConsole;    //
+    QMenu*      cmSubmenuLogLevels;      //
 
 public:
     enum LOG_LEVEL {
@@ -15,23 +23,27 @@ public:
         LL_WARNING      = 1,
         LL_ERROR        = 2,
         LL_EXCEPTION    = 3
-    } MINIMUM_LL = LL_INFO;
+    } MinimumLogLevel = LL_INFO;
 
     QList<QPair<QPair<LOG_LEVEL, QString>, QString>> LogMessages;
     QString ConsoleContext;
 
-public slots:
-    void InsertIntoTextEdit(const QPair<QPair<LOG_LEVEL, QString>, QString>);
-    void RefreshAllLogMessages();
-
 signals:
     void MessageWasLogged(const QPair<QPair<LOG_LEVEL, QString>, QString>);
 
-public:
+public slots:
     void log(const QString&,         LOG_LEVEL ll = LL_INFO);
     void log(const QList<QString>&,  LOG_LEVEL ll = LL_INFO);
     void log(const char*,            LOG_LEVEL ll = LL_INFO);
 
+    void InsertIntoTextEdit(const QPair<QPair<LOG_LEVEL, QString>, QString>);
+    void RefreshAllLogMessages();
+    void ClearConsole();
+
+    void HandleContextMenuActionTriggered(QAction*);
+    void HandleContextMenuRequested(const QPoint&);
+
+public:
     QDebugConsole(QWidget* parent);
 };
 

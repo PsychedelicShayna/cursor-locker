@@ -10,6 +10,10 @@
 #include <QMenu>
 #include <QLine>
 
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QFile>
+
 #include <QTimer>
 #include <QPair>
 
@@ -46,57 +50,80 @@ class MainWindow : public QMainWindow {
 Q_OBJECT
 
 private:
-    Ui::MainWindow*             ui;
+    Ui::MainWindow* ui;
 
-    QDebugConsole*              dbgConsole;
-    QVBoxLayout*                vblDebugConsoleLayout;
+    QDebugConsole*  dbgConsole;               // The QDebugConsole instance shown at the bottom of the GUI, used for logging.
+    QVBoxLayout*    vblDebugConsoleLayout;    // Layout that dbgConsole is contained in, set in the constructor.
 
-    void                        insertActivationParameterWidget(QWidget*, bool enable=true, bool unhide=true);
-    void                        removeActivationParameterWidget(QWidget*, bool disable=true, bool hide=true);
+    QMenu*      dbgConsoleContextMenu;    // The console's context menu QMenu that gets presented when showConsoleContextMenu is called.
+    QAction*    dbgCCMActionClear;
+    QMenu*      dbgCCMSubMenuLogLevels;
 
-    /* QComboBox / dropdown that gets added dynamically to the left of the activation method parameter
-     * text field when the hotkey activation method is selected. Allows a modifier to be selected in
-     * conjunction with the hotkey VKID, e.g. Control, Alt, Shift, etc. Its value is stored as HOTKEY_MOD
-     * enum value, in the targetHotkeyModifier member variable, whenever the selection changes.
-     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    QComboBox*                  cbxHotkeyModifier;
-    HOTKEY_MOD                  targetHotkeyModifier;  // The modifier associated with the VKID (e.g. control, alt, shift), used for the hotkey activation method.
-    const uint32_t              targetHotkeyId;    // The ID used by WinAPI to identify the registered hotkey, used for the hotkey activation method.
-    uint8_t                     targetHotkeyVkid;         // The virtual key ID that identifies the target key, used for the hotkey activation method.
 
-    /* This button is dynamically added and removed depending on the activation method. When either
-     * the window title or process image activation methods are selected, this button is inserted to
-     * the left of the activation method parameter text field by the changeActivationMethod(int) slot,
-     * which also connects the button to spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE) where
-     * the SCAN_SCOPE value is bound to WINDOW_MODE or PROCESS_MODE via std::bind, depending on the
-     * activation method that was selected when the changeActivationMethod(int) slot was called.
-     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    ProcessScannerDialog*       processScannerDialog;
-    QPushButton*                btnSpawnProcessScanner;
-    QMetaObject::Connection     btnSpawnProcessScannerConnection;
-    QString                     targetProcessImageName;             // The target process image name, used for the process image activation method.
-    QString                     targetForegroundWindowTitle;        // The target window title, used for the window title activation method.
-
-    /* For activation methods that require a timer (window title & image name), the below timer
-     * will be used to call the member function associated with the activation method, by having
-     * its timeout signal connected to that member function, and that connection will be stored
-     * in the below QMetaObject::Connection instance, so that it can later be disconnected.
-     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    QTimer*                     timedActivationMethodTimer;
-    QMetaObject::Connection     timedActivationMethodConnection;
-
-    /* Stores the currently selected activation method as an ENUM value. This can be reliably used
+    /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+     * Stores the currently selected activation method as an ENUM value. This can be reliably used
      * all over the class to determine what the current activation method is, for method-specific
      * functionality. It is set whenever the changeActivationMethod(int) SLOT is called, usually
      * as a result of the activation method dropdown's value having been changed.
      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    ACTIVATION_METHOD           selectedActivationMethod;
+    ACTIVATION_METHOD selectedActivationMethod;
 
-    // Utility Functions
-    // ----------------------------------------------------------------------------------------------------
+    /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+     * Helper functions to insert or remove any widget from the activation parameter layout defined
+     * in the UI file, which contains the activation parameter text field. Used to insert widgets
+     * like cbxHotkeyModifier, and btnSpawnProcessScanner depending on selected activation method.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    void insertActivationParameterWidget(QWidget*, bool enable=true, bool unhide=true);
+    void removeActivationParameterWidget(QWidget*, bool disable=true, bool hide=true);
+
+    /* - - - - - - - - - - - - - - - - - - - - - - -
+     * Member variables, functions, and GUI widgets
+     * associated with the hotkey activation method.
+     * - - - - - - - - - - - - - - - - - - - - - - - */
+    QComboBox*        cbxHotkeyModifier;        // Dropdown allowing for selection of a modifier (CTRL, ALT, SHIFT) in conjunction with the VKID.
+    HOTKEY_MOD        amParamHotkeyModifier;    // The modifier associated with the VKID (e.g. control, alt, shift), used for the hotkey activation method.
+    const uint32_t    amParamHotkeyId;          // The ID used by WinAPI to identify the registered hotkey, used for the hotkey activation method.
+    uint8_t           amParamHotkeyVkid;        // The virtual key ID that identifies the target key, used for the hotkey activation method.
+
+    bool              registerAMHotkey();                      // Registers a WinAPI hotkey using amParamHotkeyId and amParamHotkeyVkid.
+    bool              unregisterAMHotkey();                    // Unregisters the hotkey previously registered with amParamHotkeyId.
+    QString           setAMParamHotkeyVkid(const uint8_t&);    // Changes the hotkey VKID activation method parameter to a new value.
+    QString           setAMParamHotkeyVkid(const QString&);    // Overload that converts the QString into a uint8_t before passing it to the primary overload.
+    void              setAMToHotkey();                         // Changes the activation method for the cursor lock to hotkey mode.
+    void              unsetAMToHotkey();
+
+    /* - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+     * Member variables, functions, and GUI widgets associated with
+     * the window title and process image name activation methods.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    ProcessScannerDialog*      processScannerDialog;                // The ProcessScannerDialog instance pointer that spawnProcessScannerDialog manages the construction and destruction of.
+    QPushButton*               btnSpawnProcessScanner;              // Button connected to spawnProcessScannerDialog; allows for the selection of window titles and process images from a dialog.
+    QMetaObject::Connection    btnSpawnProcessScannerConnection;    // The connection between btnSpawnProcessScanner and spawnProcessScanerDialog, so that it may later be disconnected.
+    QString                    amParamProcessImageName;              // The process image name that will be used for the process image name activation method.
+    QString                    amParamForegroundWindowTitle;         // The window title that will be used for the window title activation method.
+
+    void                       setAMParamProcessImageName(const QString&);    // Changes the process image name activation method parameter to a new value.
+    void                       setAMToProcessImageName();                     // Sets the activation method for the cursor lock to process image name mode.
+    void                       unsetAMToProcessImageName();
+
+    void                       setAMParamForegroundWindowTitle(const QString&);    // Changes the foreground window title activation method parameter to a new value.
+    void                       setAMToForegroundWindowTitle();                     // Sets the activation method for the cursor lock to window title mode.
+    void                       unsetAMToForegroundWindowTitle();
+
+    /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+     * For activation methods that require a timer (window title & image name), the below timer
+     * will be used to call the member function associated with the activation method, by having
+     * its timeout signal connected to that member function, and that connection will be stored
+     * in the below QMetaObject::Connection instance, so that it can later be disconnected.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    QTimer*                    timedActivationMethodTimer;         // Timer that executes the activation method slot that it's connected to, when applicable.
+    QMetaObject::Connection    timedActivationMethodConnection;    // Stores the connection between timedActivationMethodTimer's timeout signal, and the activation method slot.
+
+
     // Loads a QSS stylesheet from a file, and applies it.
     bool loadStylesheetFile(const std::string&);
 
+    // Better method for creating this sound should be found in the future.
     // Allows the sequential passing of multiple frequency/durations to the Windows Beep() function.
     // Callable like beepBoop({{500,20}, {700,20}});
     void beepBoop(QList<QPair<int, int>> freqdur_list);
@@ -109,17 +136,14 @@ private:
     void disableCursorLock();   // Disable the cursor lock by calling ClipCursor(nullptr) with a nullptr.
     bool toggleCursorLock();    // Toggles enableCursorLock/disableCursorLock based on a static bool.
 
-    bool registerTargetHotkey();    // Registers a WinAPI hotkey using targetHotkeyId and targetHotkeyVkid.
-    bool unregisterTargetHotkey();  // Unregisters the hotkey previously registered with targetHotkeyId.
-
     // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
     // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.
-    bool nativeEvent(const QByteArray& event_type, void* message, qintptr* result);
+    bool nativeEvent(const QByteArray& event_type, void* message, qintptr* result) override;
     // ----------------------------------------------------------------------------------------------------
 
 signals:
     // Signal emitted by nativeEvent when it receives a registered hotkey pressed native event, and
-    // the hotkey's ID (wParam) matches targetHotkeyId.
+    // the hotkey's ID (wParam) matches amParamHotkeyId.
     void targetHotkeyWasPressed();
 
 private slots:
@@ -128,14 +152,14 @@ private slots:
     void activateBecauseTargetHotkeyWasPressed();
     // ----------------------------------------------------------------------------------------------------
 
-    // Function that checks whether or not targetProcessImageName is currently running, and activates or
+    // Function that checks whether or not amParamProcessImageName is currently running, and activates or
     // deactivates the cursor lock accordingly. Connected to checkActivationMethodTimer's timeout() signal
     // when actively selected as an activation method.
     void activateIfTargetProcessRunning();
     // ----------------------------------------------------------------------------------------------------
 
     // Function that checks if the current foreground window's title matches the title stored inside of
-    // targetForegroundWindowTitle, and activates or deactivates the cursor lock accordingly. Connected to
+    // amParamForegroundWindowTitle, and activates or deactivates the cursor lock accordingly. Connected to
     // checkActivationMethodTimer's timeout() signal when actively selected as an activation method.
     void activateIfForegroundWindowMatchesTarget();
     // ----------------------------------------------------------------------------------------------------
@@ -155,16 +179,13 @@ private slots:
      * Equally, if the foreground window stays the same after 15 checks have been performed, the timer is also reset, and no changes are made.
      * This function only works if the current activation method is set to Window title, otherwise any call made to it will be ignored.
      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    void startForegroundWindowGrabber(); //////
-    // - - - - - - - - - - - - - - - - - - ///
+    void startForegroundWindowGrabber();
 
     void spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE);
 
     // Connected in constructor to btn_mutebeepboop's clicked() signal.
     void toggleMuteBeepBoop();
 
-    // Display the debug console's custom context menu.
-    void showConsoleContextMenu(const QPoint& point);
 
 public:
     explicit MainWindow(QWidget* parent = nullptr);
