@@ -16,6 +16,108 @@ enum struct HOTKEY_MOD {
     WIN     = MOD_WIN
 };
 
+bool MainWindow::loadJsonConfig(const QString& json_file_path) {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "loadJsonConfig" };
+
+    QFile json_file { json_file_path };
+
+    if(!json_file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        dbgConsole->log({"Encountered an IO error when trying to read from a JSON config file @ \"",
+                         json_file_path, "\", are you sure you have permission to read from this location?"
+                        }, QDebugConsole::LL_ERROR);
+        return false;
+    }
+
+    QByteArray json_bytes { json_file.readAll() };
+    json_file.close();
+
+    QJsonParseError json_parse_error;
+
+    QJsonDocument json_document {
+        QJsonDocument::fromJson(json_bytes, &json_parse_error)
+    };
+
+    if(json_parse_error.error != QJsonParseError::NoError) {
+        dbgConsole->log({"Encountered JSON parsing error: ",
+                         json_parse_error.errorString()
+                        }, QDebugConsole::LL_ERROR);
+
+        return false;
+    }
+
+    QJsonObject       json_object    { json_document.object() };
+    QList<QString>    json_keys      { json_object.keys()     };
+
+    bool handler_error { false };
+
+    for(const auto& handler_pair : jsonConfigValueHandlers) {
+        const auto& matching_key {
+            std::find_if(json_keys.begin(), json_keys.end(), [&](const QString& key) -> bool {
+                return handler_pair.first == key;
+            })
+        };
+
+        if(matching_key != json_keys.end()) {
+            bool error_value { handler_pair.second(*matching_key, json_object[*matching_key]) };
+            handler_error |= error_value;
+
+            if(!error_value) {
+                dbgConsole->log({"JSON Value handler returned false for key! \"", *matching_key, "\""}, QDebugConsole::LL_WARNING);
+            }
+        }
+    }
+
+    return handler_error;
+}
+
+bool MainWindow::loadJsonConfig() {
+    return loadJsonConfig(jsonConfigFilePath);
+}
+
+bool MainWindow::dumpJsonConfigTemplate(const QString& json_file_path) {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "dumpJsonConfigTemplate" };
+
+    QJsonDocument json_template_document {QJsonObject{
+            { "vkid",       "" },
+            { "image",      "" },
+            { "title",      "" },
+            { "method",     "" },
+            { "muted",   false }
+    }};
+
+    QByteArray json_bytes { json_template_document.toJson(QJsonDocument::JsonFormat::Indented) };
+
+    QFile json_file { json_file_path };
+
+    if(!json_file.open(QIODevice::WriteOnly)) {
+        dbgConsole->log({"Encountered an IO error when trying to create a new JSON config file @ \"",
+                         json_file_path, "\", are you sure you have permission to write to this location?"
+                        }, QDebugConsole::LL_ERROR);
+
+        return false;
+    }
+
+    qint64 bytes_written { json_file.write(json_bytes) };
+    json_file.close();
+
+    if(bytes_written != json_bytes.size()) {
+        dbgConsole->log({"Wrote ", QString::number(bytes_written),
+                         "bytes when trying to create a new JSON config file @ \"",
+                         json_file_path, "\", when the data was ", QString::number(json_bytes.size()),
+                         " bytes long! This should not be happening."
+                        }, QDebugConsole::LL_ERROR);
+        return false;
+    }
+
+    return true;
+
+    // json_template_document.setObject()
+}
+
+bool MainWindow::dumpJsonConfigTemplate() {
+    return dumpJsonConfigTemplate(jsonConfigFilePath);
+}
+
 void MainWindow::insertActivationParameterWidget(QWidget* widget, bool enable, bool unhide) {
     if(widget != nullptr) {
         if(widget->layout() != ui->hlActivationParameter) {
@@ -41,8 +143,7 @@ void MainWindow::removeActivationParameterWidget(QWidget* widget, bool disable, 
 bool MainWindow::registerAMHotkey() {
     BOOL result { RegisterHotKey(HWND(winId()), amParamHotkeyId, MOD_NOREPEAT | static_cast<int>(amParamHotkeyModifier), amParamHotkeyVkid) };
 
-    dbgConsole->log({
-                     "RegisterHotKey(HWND(winId), 0x",
+    dbgConsole->log({"RegisterHotKey(HWND(winId), 0x",
                      QString::number(amParamHotkeyId, 16), \
                      ", MOD_NOREPEAT | ",
                      QString::number(static_cast<int>(amParamHotkeyModifier)),
@@ -74,7 +175,7 @@ QString MainWindow::setAMParamHotkeyVkid(const uint8_t& vkid) {
     }
 
     const QString& vkid_hexstr  {
-        QString { "0x%1" }.arg(vkid, 4, 16, QLatin1Char { '0' })
+        QString { "0x%1" }.arg(vkid, 2, 16, QLatin1Char { '0' })
     };
 
     return vkid_hexstr;
@@ -151,6 +252,7 @@ void MainWindow::setAMToProcessImageName() {
 
     if(amParamProcessImageName.size()) {
         ui->linActivationParameter->setText(amParamProcessImageName);
+        dbgConsole->log({"Loaded amParamProcessImageName \"", amParamProcessImageName, "\""});
     }
 
     timedActivationMethodConnection = connect(timedActivationMethodTimer,   SIGNAL(timeout()),
@@ -159,9 +261,13 @@ void MainWindow::setAMToProcessImageName() {
     insertActivationParameterWidget(btnSpawnProcessScanner);
     btnSpawnProcessScannerConnection = connect(btnSpawnProcessScanner, &QPushButton::clicked,
                                                std::bind(&MainWindow::spawnProcessScannerDialog, this, ProcessScanner::PROCESS_MODE));
+
+    dbgConsole->log("Activation method has been set to process image name.");
 }
 
 void MainWindow::unsetAMToProcessImageName() {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "unsetAMToProcessImageName" };
+
     disconnect(timedActivationMethodConnection);
     removeActivationParameterWidget(btnSpawnProcessScanner);
     disconnect(btnSpawnProcessScannerConnection);
@@ -172,6 +278,8 @@ void MainWindow::setAMParamForegroundWindowTitle(const QString& foreground_windo
 }
 
 void MainWindow::setAMToForegroundWindowTitle() {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "setAMToForegroundWindowTitle" };
+
     dbgConsole->log("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.");
 
     selectedActivationMethod = ACTIVATION_METHOD::WINDOW_TITLE;
@@ -179,6 +287,7 @@ void MainWindow::setAMToForegroundWindowTitle() {
 
     if(amParamForegroundWindowTitle.size()) {
         ui->linActivationParameter->setText(amParamForegroundWindowTitle);
+        dbgConsole->log({"Set activation parameter text field to: ", amParamForegroundWindowTitle});
     }
 
     timedActivationMethodConnection = connect(timedActivationMethodTimer,   SIGNAL(timeout()),
@@ -409,6 +518,19 @@ void MainWindow::changeActivationMethod(int method_index) {
     timedActivationMethodTimer->start(500);
 }
 
+bool MainWindow::changeActivationMethod(const QString& method) {
+    static const QMap<QString, int32_t>& resolver {
+        { "",        0 },
+        { "hotkey",  1 },
+        { "image",   2 },
+        { "title",   3 }
+    };
+
+    if(!resolver.contains(method)) return false;
+    ui->cbxActivationMethod->setCurrentIndex(resolver[method]);
+    return true;
+}
+
 void MainWindow::changeHotkeyModifier(int modifier_index) {
     switch(modifier_index) {
     case(0) :
@@ -562,14 +684,13 @@ void MainWindow::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE process_sc
     processScannerDialog->show();
 }
 
+void MainWindow::setMuteBeepBoopState(bool state) {
+    muteBeepBoop = state;
+    ui->btnMuteBeepBoop->setText(state ? "Unmute" : "Mute");
+}
+
 void MainWindow::toggleMuteBeepBoop() {
-    if(muteBeepBoop) {
-        muteBeepBoop = false;
-        ui->btnMuteBeepBoop->setText("Mute");
-    } else {
-        muteBeepBoop = true;
-        ui->btnMuteBeepBoop->setText("Unmute");
-    }
+    setMuteBeepBoopState(muteBeepBoop ^ true);
 }
 
 MainWindow::MainWindow(QWidget* parent)
@@ -583,6 +704,8 @@ MainWindow::MainWindow(QWidget* parent)
       vblDebugConsoleLayout         { new QVBoxLayout            },
       dbgConsoleContextMenu         { new QMenu { dbgConsole }   },
 
+      jsonConfigFilePath            { "./defaults.json"          },
+
       // Hotkey activation method member variables initialization
       cbxHotkeyModifier             { new QComboBox     { this } },
       amParamHotkeyModifier         { HOTKEY_MOD::NONE           },
@@ -592,8 +715,8 @@ MainWindow::MainWindow(QWidget* parent)
       // Process scanner member variables initialization.
       processScannerDialog          { nullptr                    },     // ProcessScannerDialog instance, must be nullptr as spawnProcessScannerDialog takes care of construction and destruction.
       btnSpawnProcessScanner        { new QPushButton   { this } },     // QPushButton connected to spawnProcessScannerDialog further down in the constructor.
-      amParamProcessImageName        { QString { "" }             },
-      amParamForegroundWindowTitle   { QString { "" }             },
+      amParamProcessImageName       { QString { "" }             },
+      amParamForegroundWindowTitle  { QString { "" }             },
 
       timedActivationMethodTimer    { new QTimer        { this } },
       selectedActivationMethod      { ACTIVATION_METHOD::NOTHING },
@@ -659,6 +782,55 @@ MainWindow::MainWindow(QWidget* parent)
     connect(cbxHotkeyModifier,                      SIGNAL(currentIndexChanged(int)),
             this,                                   SLOT(changeHotkeyModifier(int)));
 
+    jsonConfigValueHandlers = {
+        {"title", [&](const QString&, QJsonValueRef value) -> bool {
+             if(!value.isString()) return false;
+             const auto& value_str { value.toString() };
+             if(value_str.size()) setAMParamForegroundWindowTitle(value.toString());
+             return true;
+         }},
+
+        {"image", [&](const QString&, QJsonValueRef value) -> bool {
+             if(!value.isString()) return false;
+             const auto& value_str { value.toString() };
+             if(value_str.size()) setAMParamProcessImageName(value_str);
+             return true;
+         }},
+
+        {"vkid", [&](const QString&, QJsonValueRef value) -> bool {
+             if(!value.isString()) return false;
+             const auto& value_str { value.toString() };
+             if(value_str.size()) return setAMParamHotkeyVkid(value_str).size();
+             return true;
+         }},
+
+        {"method", [&](const QString&, QJsonValueRef value) -> bool {
+             if(!value.isString()) return false;
+             const auto& value_str { value.toString() };
+             if(value_str.size()) changeActivationMethod(value_str);
+             return true;
+         }},
+
+        {"muted", [&](const QString&, QJsonValueRef value) -> bool {
+             if(!value.isBool()) return false;
+             setMuteBeepBoopState(value.toBool());
+             return true;
+         }}
+    };
+
+    QFileInfo json_file_info { jsonConfigFilePath };
+
+    if(json_file_info.exists() && json_file_info.isFile()) {
+        loadJsonConfig();
+    } else {
+        if(dumpJsonConfigTemplate()) {
+            QMessageBox::information(this, "New JSON File Generated!", "No JSON config file was found, so a new one has been generated at this location: \"" + json_file_info.absoluteFilePath() + "\" - please fill it in if you wish to have default settings.");
+        } else {
+            QMessageBox::critical(this, "Failed To Generate JSON File!", "No JSON file could be found, so an attempt was made to generate a new one, but it failed! The program can still continue, but no default values can be loaded. Are you sure you have permission to write to this location? - \"" + json_file_info.absoluteFilePath() + "\"");
+        }
+    }
+
+    /*
     // Load JSON Defaults
     // --------------------------------------------------
     std::ifstream input_stream { "./defaults.json", std::ios::binary };
@@ -770,6 +942,7 @@ MainWindow::MainWindow(QWidget* parent)
             QMessageBox::critical(this, "Bad Stream", "Attempted to create a defaults.json file, but the stream was bad. Are you sure this program has permission to write to the current directory?");
         }
     }
+    */
 
     if(loadStylesheetFile("./style_sheet.qss")) {
         dbgConsole->log("Loaded QSS stylesheet ./style_sheet.qss - theme has been applied.");

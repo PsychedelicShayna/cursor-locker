@@ -12,6 +12,7 @@
 
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QFileInfo>
 #include <QFile>
 
 #include <QTimer>
@@ -48,7 +49,6 @@ enum struct HOTKEY_MOD;
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
-
 private:
     Ui::MainWindow* ui;
 
@@ -58,6 +58,20 @@ private:
     QMenu*      dbgConsoleContextMenu;    // The console's context menu QMenu that gets presented when showConsoleContextMenu is called.
     QAction*    dbgCCMActionClear;
     QMenu*      dbgCCMSubMenuLogLevels;
+
+    QList<QPair<QString, std::function<bool(const QString&, QJsonValueRef)>>> jsonConfigValueHandlers;
+
+    QString jsonConfigFilePath;
+
+    /* Loads the JSON config file pointed to by jsonConfigFilePath, and gives each
+     * key and its value to the matching handler inside of jsonConfigValueHandlers.
+     * If any handler returned false, the return value is false, and true if all true.
+     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+    bool loadJsonConfig(const QString&);    // Takes the path to the json file directly.
+    bool loadJsonConfig();                  // Overload that passes jsonConfigFilePath as the file path.
+
+    bool dumpJsonConfigTemplate(const QString&);
+    bool dumpJsonConfigTemplate();
 
 
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -167,6 +181,9 @@ private slots:
     // Connected in constructor to cbx_activation_method's CurrentIndexChanged(int) signal.
     void changeActivationMethod(int method_index);
 
+    // Overload that maps QString to activation method index and calls changeActivationMethod(int) overload.
+    bool changeActivationMethod(const QString&);
+
     // Connected in constructor to cbxHotkeyModifier's CurrentIndexChanged(int) signal.
     void changeHotkeyModifier(int modifier_index);
 
@@ -183,9 +200,8 @@ private slots:
 
     void spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE);
 
-    // Connected in constructor to btn_mutebeepboop's clicked() signal.
+    void setMuteBeepBoopState(bool);
     void toggleMuteBeepBoop();
-
 
 public:
     explicit MainWindow(QWidget* parent = nullptr);
