@@ -15,6 +15,9 @@
 #include <QFileInfo>
 #include <QFile>
 
+#include <QStandardItemModel>
+#include <QStandardItem>
+
 #include <QTimer>
 #include <QPair>
 
@@ -33,11 +36,11 @@
 #include <string>
 #include <tuple>
 
-#include "qdebugconsole_widget.hpp"
+#include "debug_console_widget.hpp"
+#include "hotkey_input_widget.hpp"
 #include "process_scanner_dialog.hxx"
-
-#include "json.hxx"
-using Json = nlohmann::json;
+#include "check_box_list_widget.hpp"
+#include "winapi_utilities.hpp"
 
 
 namespace Ui {
@@ -45,7 +48,6 @@ namespace Ui {
 }
 
 enum struct ACTIVATION_METHOD;
-enum struct HOTKEY_MOD;
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -94,10 +96,12 @@ private:
      * Member variables, functions, and GUI widgets
      * associated with the hotkey activation method.
      * - - - - - - - - - - - - - - - - - - - - - - - */
-    QComboBox*        cbxHotkeyModifier;        // Dropdown allowing for selection of a modifier (CTRL, ALT, SHIFT) in conjunction with the VKID.
-    HOTKEY_MOD        amParamHotkeyModifier;    // The modifier associated with the VKID (e.g. control, alt, shift), used for the hotkey activation method.
+
+    QCheckBoxList*    cblHotkeyModifiers;       // Dropdown allowing for selection of a modifier (CTRL, ALT, SHIFT) in conjunction with the VKID.
+    QHotkeyInput*     hotkeyInput;
+    quint32           amParamHotkeyModifiers;   // Bitmask that storess HOTKEY_MOD values, and used in registerAMHotkey.
     const uint32_t    amParamHotkeyId;          // The ID used by WinAPI to identify the registered hotkey, used for the hotkey activation method.
-    uint8_t           amParamHotkeyVkid;        // The virtual key ID that identifies the target key, used for the hotkey activation method.
+    quint32           amParamHotkeyVkid;        // The virtual key ID that identifies the target key, used for the hotkey activation method.
 
     bool              registerAMHotkey();                      // Registers a WinAPI hotkey using amParamHotkeyId and amParamHotkeyVkid.
     bool              unregisterAMHotkey();                    // Unregisters the hotkey previously registered with amParamHotkeyId.
@@ -184,8 +188,12 @@ private slots:
     // Overload that maps QString to activation method index and calls changeActivationMethod(int) overload.
     bool changeActivationMethod(const QString&);
 
-    // Connected in constructor to cbxHotkeyModifier's CurrentIndexChanged(int) signal.
-    void changeHotkeyModifier(int modifier_index);
+    void handleModifierCheckeStateChange(QStandardItem*);
+
+    void handleHotkeyRecorded(QHotkeyInput::WindowsHotkey);
+
+    // // Connected in constructor to cbxHotkeyModifier's CurrentIndexChanged(int) signal.
+    // void changeHotkeyModifier(int modifier_index);
 
     // Connected in constructor to btn_edit_activation_parameter's clicked() signal.
     void editActivationMethodParameter();

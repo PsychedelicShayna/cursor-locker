@@ -1,4 +1,4 @@
-#include "qdebugconsole_widget.hpp"
+#include "debug_console_widget.hpp"
 
 void QDebugConsole::log(const QString& message, LOG_LEVEL ll) {
     const QPair<QPair<LOG_LEVEL, QString>, QString>& mpair { { ll, ConsoleContext }, message + '\n' };

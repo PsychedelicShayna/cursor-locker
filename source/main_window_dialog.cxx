@@ -1,4 +1,4 @@
-#include "mainwindow_dialog.hxx"
+#include "main_window_dialog.hxx"
 #include "ui_mainwindow_dialog.h"
 
 enum struct ACTIVATION_METHOD {
@@ -77,7 +77,7 @@ bool MainWindow::loadJsonConfig() {
 bool MainWindow::dumpJsonConfigTemplate(const QString& json_file_path) {
     QDebugConsoleContext dbg_console_context { dbgConsole, "dumpJsonConfigTemplate" };
 
-    QJsonDocument json_template_document {QJsonObject{
+    QJsonDocument json_template_document { QJsonObject {
             { "vkid",       "" },
             { "image",      "" },
             { "title",      "" },
@@ -110,8 +110,6 @@ bool MainWindow::dumpJsonConfigTemplate(const QString& json_file_path) {
     }
 
     return true;
-
-    // json_template_document.setObject()
 }
 
 bool MainWindow::dumpJsonConfigTemplate() {
@@ -131,7 +129,7 @@ void MainWindow::insertActivationParameterWidget(QWidget* widget, bool enable, b
 
 void MainWindow::removeActivationParameterWidget(QWidget* widget, bool disable, bool hide) {
     if(widget != nullptr) {
-        if(cbxHotkeyModifier->layout() == ui->hlActivationParameter) {
+        if(widget->layout() == ui->hlActivationParameter) {
             ui->hlActivationParameter->removeWidget(widget);
         }
 
@@ -141,12 +139,12 @@ void MainWindow::removeActivationParameterWidget(QWidget* widget, bool disable, 
 }
 
 bool MainWindow::registerAMHotkey() {
-    BOOL result { RegisterHotKey(HWND(winId()), amParamHotkeyId, MOD_NOREPEAT | static_cast<int>(amParamHotkeyModifier), amParamHotkeyVkid) };
+    BOOL result { RegisterHotKey(HWND(winId()), amParamHotkeyId, MOD_NOREPEAT | amParamHotkeyModifiers, amParamHotkeyVkid) };
 
     dbgConsole->log({"RegisterHotKey(HWND(winId), 0x",
                      QString::number(amParamHotkeyId, 16), \
                      ", MOD_NOREPEAT | ",
-                     QString::number(static_cast<int>(amParamHotkeyModifier)),
+                     QString::number(amParamHotkeyModifiers),
                      ", 0x",
                      QString::number(amParamHotkeyVkid, 16),
                      ") returned ",
@@ -177,6 +175,8 @@ QString MainWindow::setAMParamHotkeyVkid(const uint8_t& vkid) {
     const QString& vkid_hexstr  {
         QString { "0x%1" }.arg(vkid, 2, 16, QLatin1Char { '0' })
     };
+
+    ui->linActivationParameter->setText(vkid_hexstr);
 
     return vkid_hexstr;
 }
@@ -228,7 +228,8 @@ void MainWindow::setAMToHotkey() {
         registerAMHotkey();
     }
 
-    insertActivationParameterWidget(cbxHotkeyModifier, false);
+    insertActivationParameterWidget(hotkeyInput, false);
+    insertActivationParameterWidget(cblHotkeyModifiers, false);
 }
 
 void MainWindow::unsetAMToHotkey() {
@@ -237,11 +238,13 @@ void MainWindow::unsetAMToHotkey() {
     disconnect(this, &MainWindow::targetHotkeyWasPressed,
                this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
 
-    removeActivationParameterWidget(cbxHotkeyModifier);
+    removeActivationParameterWidget(cblHotkeyModifiers);
+    removeActivationParameterWidget(hotkeyInput);
 }
 
 void MainWindow::setAMParamProcessImageName(const QString& process_image_name) {
     amParamProcessImageName = process_image_name;
+    ui->linActivationParameter->setText(amParamProcessImageName);
 }
 
 void MainWindow::setAMToProcessImageName() {
@@ -275,6 +278,7 @@ void MainWindow::unsetAMToProcessImageName() {
 
 void MainWindow::setAMParamForegroundWindowTitle(const QString& foreground_window_title) {
     amParamForegroundWindowTitle = foreground_window_title;
+    ui->linActivationParameter->setText(amParamForegroundWindowTitle);
 }
 
 void MainWindow::setAMToForegroundWindowTitle() {
@@ -531,7 +535,27 @@ bool MainWindow::changeActivationMethod(const QString& method) {
     return true;
 }
 
+void MainWindow::handleModifierCheckeStateChange(QStandardItem* item_changed) {
+    const WINAPI_MODIFIER& matching_modifier {
+        QStringToWinApiKbModifier(item_changed->text())
+    };
+
+    if(item_changed->checkState() == Qt::Checked) {
+        amParamHotkeyModifiers |= matching_modifier;
+    } else {
+        amParamHotkeyModifiers &= ~matching_modifier;
+    }
+}
+
+void MainWindow::handleHotkeyRecorded(QHotkeyInput::WindowsHotkey windows_hotkey) {
+    setAMParamHotkeyVkid(windows_hotkey.Vkid);
+    amParamHotkeyModifiers = windows_hotkey.Modifiers;
+    dbgConsole->log({"Recorded new activation hotke: ", windows_hotkey.ToString()});
+}
+
+/*
 void MainWindow::changeHotkeyModifier(int modifier_index) {
+
     switch(modifier_index) {
     case(0) :
         amParamHotkeyModifier = HOTKEY_MOD::NONE;
@@ -553,7 +577,9 @@ void MainWindow::changeHotkeyModifier(int modifier_index) {
         amParamHotkeyModifier = HOTKEY_MOD::WIN;
         break;
     }
+
 }
+*/
 
 void MainWindow::editActivationMethodParameter() {
     if(ui->btnEditActivationParameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
@@ -562,14 +588,18 @@ void MainWindow::editActivationMethodParameter() {
         ui->cbxActivationMethod->setEnabled(false);
 
         if(selectedActivationMethod == ACTIVATION_METHOD::HOTKEY) {
-            cbxHotkeyModifier->setEnabled(true);
+            cblHotkeyModifiers->setEnabled(true);
+            hotkeyInput->setEnabled(true);
+            hotkeyInput->StartRecording();
         }
     } else if(ui->btnEditActivationParameter->text() == "Confirm") {
         ui->btnEditActivationParameter->setText("Edit");
         ui->linActivationParameter->setEnabled(false);
         ui->cbxActivationMethod->setEnabled(true);
 
-        cbxHotkeyModifier->setEnabled(false);
+        cblHotkeyModifiers->setEnabled(false);
+        hotkeyInput->setEnabled(false);
+        hotkeyInput->StopRecording();
 
         switch(selectedActivationMethod) {
         case ACTIVATION_METHOD::HOTKEY : {
@@ -706,9 +736,12 @@ MainWindow::MainWindow(QWidget* parent)
 
       jsonConfigFilePath            { "./defaults.json"          },
 
+      selectedActivationMethod      { ACTIVATION_METHOD::NOTHING },
+
       // Hotkey activation method member variables initialization
-      cbxHotkeyModifier             { new QComboBox     { this } },
-      amParamHotkeyModifier         { HOTKEY_MOD::NONE           },
+      cblHotkeyModifiers            { new QCheckBoxList { this } },
+      hotkeyInput                   { new QHotkeyInput  { this } },
+      amParamHotkeyModifiers        { WINMOD_NULLMOD             },
       amParamHotkeyId               { 0x1A4                      },
       amParamHotkeyVkid             { 0x000                      },
 
@@ -719,7 +752,6 @@ MainWindow::MainWindow(QWidget* parent)
       amParamForegroundWindowTitle  { QString { "" }             },
 
       timedActivationMethodTimer    { new QTimer        { this } },
-      selectedActivationMethod      { ACTIVATION_METHOD::NOTHING },
 
       muteBeepBoop                  { false                      }
 
@@ -729,6 +761,7 @@ MainWindow::MainWindow(QWidget* parent)
 
 {
     ui->setupUi(this);
+
 
     // Configure Main Window Flags & Set Initial Window Size
     // --------------------------------------------------
@@ -753,11 +786,12 @@ MainWindow::MainWindow(QWidget* parent)
     vblDebugConsoleLayout->addWidget(dbgConsole);
     ui->grpDebugConsole->setLayout(vblDebugConsoleLayout);
 
-    // cbxHotkeyModifier initial values.
-    cbxHotkeyModifier->addItems({"NONE", "ALT", "CTRL", "SHIFT", "WIN"});
-    cbxHotkeyModifier->setEnabled(false);
-    cbxHotkeyModifier->setHidden(true);
-    cbxHotkeyModifier->setMinimumWidth(75);
+    cblHotkeyModifiers->setEnabled(false);
+    cblHotkeyModifiers->setHidden(true);
+    cblHotkeyModifiers->setMinimumWidth(90);
+    cblHotkeyModifiers->AddCheckableItems({"ALT", "CONTROL", "SHIFT", "WIN"}, Qt::Checked);
+
+    hotkeyInput->setHidden(true);
 
     // btnSpawnProcessScanner initial values.
     btnSpawnProcessScanner->setText("Select");
@@ -779,8 +813,14 @@ MainWindow::MainWindow(QWidget* parent)
             this,                                   SLOT(toggleMuteBeepBoop()));
 
     // Dynamic Class Widgets --------------------------------------------------
-    connect(cbxHotkeyModifier,                      SIGNAL(currentIndexChanged(int)),
-            this,                                   SLOT(changeHotkeyModifier(int)));
+    // connect(cbxHotkeyModifier,                      SIGNAL(currentIndexChanged(int)),
+    //         this,                                   SLOT(changeHotkeyModifier(int)));
+
+    connect(cblHotkeyModifiers->StandardItemModel,      SIGNAL(itemChanged(QStandardItem*)),
+            this,                                       SLOT(handleModifierSelectionChanged(QStandardItem*)));
+
+    connect(hotkeyInput,                                SIGNAL(WindowsHotkeyRecorded(QHotkeyInput::WindowsHotkey)),
+            this,                                       SLOT(handleHotkeyRecorded(QHotkeyInput::WindowsHotkey)));
 
     jsonConfigValueHandlers = {
         {"title", [&](const QString&, QJsonValueRef value) -> bool {
@@ -829,120 +869,6 @@ MainWindow::MainWindow(QWidget* parent)
             QMessageBox::critical(this, "Failed To Generate JSON File!", "No JSON file could be found, so an attempt was made to generate a new one, but it failed! The program can still continue, but no default values can be loaded. Are you sure you have permission to write to this location? - \"" + json_file_info.absoluteFilePath() + "\"");
         }
     }
-
-    /*
-    // Load JSON Defaults
-    // --------------------------------------------------
-    std::ifstream input_stream { "./defaults.json", std::ios::binary };
-
-    if(input_stream.good()) {
-        std::string raw_json_string { std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() };
-        input_stream.close();
-
-        Json default_values;
-
-        try {
-            default_values = Json::parse(raw_json_string);
-            dbgConsole->log("(defaults.json) Default values from defaults.json have been parsed.");
-        } catch(const Json::exception& e) {
-            dbgConsole->log("(defaults.json) Could not parse values from defaults.json, the file might be incorrectly formatted.", QDebugConsole::LL_ERROR);
-            dbgConsole->log({"(defaults.json) Json::exception::what -- ", e.what()}, QDebugConsole::LL_EXCEPTION);
-            QMessageBox::critical(this, "JSON Exception", "Error when parsing defaults.json, the file might be incorrectly formatted.");
-        } catch(const std::exception& e) {
-            dbgConsole->log("(defaults.json) Non-JSON exception thrown when parsing values from defaults.json", QDebugConsole::LL_ERROR);
-            dbgConsole->log({"(defaults.json) std::exception::what -- ", e.what()}, QDebugConsole::LL_EXCEPTION);
-            QMessageBox::critical(this, "Unknown Exception", "Error when parsing defaults.json, the file might be incorrectly formatted, but the exception isn't a JSON exception.");
-        }
-
-        if(default_values.size()) {
-            if(default_values.contains("vkid")) {
-                if(default_values["vkid"].is_string() && default_values["vkid"] != "") {
-                    const std::string& vkid_hex_string { default_values["vkid"].get<std::string>() };
-                    uint8_t vkid { static_cast<uint8_t>(strtol(vkid_hex_string.c_str(), nullptr, 16)) };
-                    amParamHotkeyVkid = vkid;
-
-                    dbgConsole->log({"(defaults.json) Loaded activation hotkey VKID \"0x", QString::number(amParamHotkeyVkid, 16), "\""});
-                } else {
-                    dbgConsole->log("(defaults.json) Invalid value type for \"vkid\" key, should be a string.", QDebugConsole::LL_WARNING);
-                    QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"vkid\" key in defaults.json is not a string! Ignoring its value.");
-                }
-            }
-
-            if(default_values.contains("image")) {
-                if(default_values["image"].is_string() && default_values["image"] != "") {
-                    amParamProcessImageName = QString::fromStdString(default_values["image"].get<std::string>());
-                    dbgConsole->log({"(defaults.json) Loaded process image name \"", amParamProcessImageName, "\""});
-                } else if(!default_values["image"].is_string()) {
-                    dbgConsole->log("(defaults.json) Invalid value type for \"image\" key, should be a string.", QDebugConsole::LL_WARNING);
-                    QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"image\" key in defaults.json is not a string! Ignoring its value.");
-                }
-            }
-
-            if(default_values.contains("title")) {
-                if(default_values["title"].is_string() && default_values["title"] != "") {
-                    amParamForegroundWindowTitle = QString::fromStdString(default_values["title"].get<std::string>());
-                    dbgConsole->log({"(defaults.json) Loaded foreground window title \"", amParamForegroundWindowTitle, "\""});
-                } else if(!default_values["title"].is_string()) {
-                    dbgConsole->log("(defaults.json) Invalid value type for \"title\" key, should be a string.", QDebugConsole::LL_WARNING);
-                    QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"title\" key in defaults.json is not a string! Ignoring its value.");
-                }
-            }
-
-            if(default_values.contains("method")) {
-                if(default_values["method"].is_string() && default_values["method"] != "") {
-                    const std::string& method_string { default_values["method"].get<std::string>() };
-                    static const Json method_resolver { {{"vkid", 1}, {"image", 2}, {"title", 3}} };
-
-                    if(method_resolver.contains(method_string)) {
-                        ui->cbxActivationMethod->setCurrentIndex(method_resolver[method_string].get<uint8_t>());
-                        dbgConsole->log({"(defaults.json) Loaded default activation method \"", QString::fromStdString(method_string), "\""});
-                    } else {
-                        dbgConsole->log({"(defaults.json) Invalid activation method \"", QString::fromStdString(method_string), "\" for \"method\" key."}, QDebugConsole::LL_WARNING);
-                        QMessageBox::warning(this, "Invalid Activation Method", "Invalid activation method configured in defaults.json, \"" + QString::fromStdString(method_string) + "\" - leave blank to disable, or pick from: vkid, title, window");
-                    }
-                } else if(!default_values["method"].is_string()) {
-                    dbgConsole->log("(defaults.json) Invalid value type for \"method\" key, should be a string.", QDebugConsole::LL_WARNING);
-                    QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"method\" key in defaults.json is not a string! Ignoring its value.");
-                }
-            }
-
-            if(default_values.contains("muted")) {
-                if(default_values["muted"].is_boolean()) {
-                    const bool& muted_value { default_values["muted"].get<bool>() };
-                    muteBeepBoop = muted_value;
-                    ui->btnMuteBeepBoop->setText("Unmute");
-                    dbgConsole->log("(defaults.json) Loaded default mute state.");
-                } else {
-                    dbgConsole->log("(defaults.json) Invalid value type for \"muted\" key, should be a boolean.", QDebugConsole::LL_WARNING);
-                    QMessageBox::warning(this, "Invalid JSON Value Type", "Value of the \"muted\" key in defaults.json is not a boolean value! Must be true or false, without quotes.");
-                }
-            }
-        }
-    } else {
-        std::ofstream output_stream { "./defaults.json", std::ios::binary };
-
-        if(output_stream.good()) {
-            const Json& json_template {{
-                {"vkid", ""},
-                {"image", ""},
-                {"title", ""},
-                {"method", ""},
-                {"muted", false}
-            }};
-
-            const std::string& dumped_json { json_template.dump(4) };
-
-            output_stream.write(dumped_json.data(), dumped_json.size());
-            output_stream.close();
-
-            dbgConsole->log("(defaults.json) Generated new defaults.json file using blank template.");
-            QMessageBox::information(this, "Generated defaults.json", "The defaults.json file has been generated, if you wish to store default program values, please fill it in.");
-        } else {
-            dbgConsole->log("(defaults.json) Bad ofstream when attempting to generate a new defaults.json file! Most likely a permission error.", QDebugConsole::LL_ERROR);
-            QMessageBox::critical(this, "Bad Stream", "Attempted to create a defaults.json file, but the stream was bad. Are you sure this program has permission to write to the current directory?");
-        }
-    }
-    */
 
     if(loadStylesheetFile("./style_sheet.qss")) {
         dbgConsole->log("Loaded QSS stylesheet ./style_sheet.qss - theme has been applied.");

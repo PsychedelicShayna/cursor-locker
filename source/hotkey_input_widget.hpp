@@ -5,17 +5,12 @@
 #include <QKeyEvent>
 #include <QEvent>
 
+#include "winapi_utilities.hpp"
+
 class QHotkeyInput : public QLineEdit {
 Q_OBJECT
 public:
     struct WindowsHotkey {
-        enum Modifier {
-            WINMOD_ALT        = 0x01,
-            WINMOD_CONTROL    = 0x02,
-            WINMOD_SHIFT      = 0x04,
-            WINMOD_WIN        = 0x08
-        };
-
         Qt::KeyboardModifiers QtModifiers;
         QList<Qt::Key> QtModifierKeys;
         Qt::Key QtKey;
@@ -32,15 +27,13 @@ public:
     };
 
 signals:
-    void WindowsHotkeyRecorded(WindowsHotkey);
+    void WindowsHotkeyRecorded(QHotkeyInput::WindowsHotkey);
 
 private:
     WindowsHotkey lastWindowsHotkeyEmitted;
     WindowsHotkey windowsHotkey;
     bool mainKeyEstablished;
     bool isRecording;
-
-    quint32 convertQtKeyToWindowsModifier(const Qt::Key&) const;
 
 public slots:
     void StartRecording();

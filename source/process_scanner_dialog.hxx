@@ -17,7 +17,7 @@
 
 #define ENABLE_CONSOLE
 
-#include "qdebugconsole_widget.hpp"
+#include "debug_console_widget.hpp"
 #include "process_scanner.hpp"
 
 namespace Ui {
