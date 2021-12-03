@@ -138,15 +138,17 @@ void MainWindow::removeActivationParameterWidget(QWidget* widget, bool disable, 
     }
 }
 
-bool MainWindow::registerAMHotkey() {
-    BOOL result { RegisterHotKey(HWND(winId()), amParamHotkeyId, MOD_NOREPEAT | amParamHotkeyModifiers, amParamHotkeyVkid) };
+bool MainWindow::registerAmpHotkey() {
+    QDebugConsoleContext { dbgConsole, "registerAmpHotkey" };
+
+    BOOL result { RegisterHotKey(HWND(winId()), ampHotkeyId, MOD_NOREPEAT | ampHotkeyModifiersBitmask, ampHotkeyVkid) };
 
     dbgConsole->log({"RegisterHotKey(HWND(winId), 0x",
-                     QString::number(amParamHotkeyId, 16), \
+                     QString::number(ampHotkeyId, 16), \
                      ", MOD_NOREPEAT | ",
-                     QString::number(amParamHotkeyModifiers),
+                     QString::number(ampHotkeyModifiersBitmask),
                      ", 0x",
-                     QString::number(amParamHotkeyVkid, 16),
+                     QString::number(ampHotkeyVkid, 16),
                      ") returned ",
                      result ? "true" : "false"
                  });
@@ -154,35 +156,85 @@ bool MainWindow::registerAMHotkey() {
     return result;
 }
 
-bool MainWindow::unregisterAMHotkey() {
-    BOOL result { UnregisterHotKey(HWND(winId()), amParamHotkeyId) };
+bool MainWindow::unregisterAmpHotkey() {
+    QDebugConsoleContext { dbgConsole, "unregisterAmpHotkey" };
+
+    BOOL result { UnregisterHotKey(HWND(winId()), ampHotkeyId) };
 
     if(result) {
-        dbgConsole->log({"UnregisterHotKey(HWND(winId), 0x", QString::number(amParamHotkeyId, 16), ") returned true"});
+        dbgConsole->log({"UnregisterHotKey(HWND(winId), 0x", QString::number(ampHotkeyId, 16), ") returned true"});
     }
 
     return result;
 }
 
-QString MainWindow::setAMParamHotkeyVkid(const uint8_t& vkid) {
-    amParamHotkeyVkid = vkid;
+/*
+bool MainWindow::setAmpHotkeyModifiersBitmaskFromDropdown(QCheckBoxList* check_box_list) {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "setAmpHotkeyModifiersBitmaskFromDropdown" };
+
+    const quint32 previous_modifiers { ampHotkeyModifiersBitmask };
+
+    for(qint32 i { 0 }; i < check_box_list->count(); ++i) {
+        const QStandardItem* item { check_box_list->ItemAt(i) };
+
+        const WINAPI_MODIFIER& matching_modifier {
+            QStringToWinApiKbModifier(item->text())
+        };
+
+        if(matching_modifier == WINMOD_NULLMOD) {
+            dbgConsole->log({"Found no matching modifier for CheckBoxList item: ", item->text()}, QDebugConsole::LL_WARNING);
+            continue;
+        }
+
+        const quint32 modifiers_before_bitwiseop { ampHotkeyModifiersBitmask };
+
+        if(item->checkState() == Qt::Checked) {
+            ampHotkeyModifiersBitmask |= matching_modifier;
+
+            if(modifiers_before_bitwiseop != ampHotkeyModifiersBitmask) {
+                dbgConsole->log({"Set hotkey modifier: ", item->text()});
+            }
+        } else {
+            ampHotkeyModifiersBitmask &= ~matching_modifier;
+
+            if(modifiers_before_bitwiseop != ampHotkeyModifiersBitmask) {
+                dbgConsole->log({"Unset hotkey modifier: ", item->text()});
+            }
+        }
+    }
+
+    return previous_modifiers != ampHotkeyModifiersBitmask;
+}
+*/
+
+QString MainWindow::setAmpHotkeyVkid(const quint32& vkid) {
+    ampHotkeyVkid = vkid;
+
+    unregisterAmpHotkey();
 
     if(vkid && selectedActivationMethod == ACTIVATION_METHOD::HOTKEY) {
-        unregisterAMHotkey();
-        registerAMHotkey();
+        registerAmpHotkey();
     }
 
     const QString& vkid_hexstr  {
         QString { "0x%1" }.arg(vkid, 2, 16, QLatin1Char { '0' })
     };
 
-    ui->linActivationParameter->setText(vkid_hexstr);
+    if(vkid) {
+        ui->linActivationParameter->setText(vkid_hexstr);
+    } else {
+        ui->linActivationParameter->clear();
+    }
 
     return vkid_hexstr;
 }
 
-QString MainWindow::setAMParamHotkeyVkid(const QString& vkid_hexstr) {
-    QDebugConsoleContext dbg_console_context { dbgConsole, "setAMParamHotkeyVkid(QString)" };
+QString MainWindow::setAmpHotkeyVkid(const QString& vkid_hexstr) {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "setAmpHotkeyVkid(QString)" };
+
+    if(!vkid_hexstr.size()) {
+        return setAmpHotkeyVkid(0x00);
+    }
 
     char hex_conversion_buffer[5];
 
@@ -190,10 +242,10 @@ QString MainWindow::setAMParamHotkeyVkid(const QString& vkid_hexstr) {
                sizeof(hex_conversion_buffer));
 
     bool conversion_success { false };
-    int32_t vkid = vkid_hexstr.toInt(&conversion_success, 16);
+    qint32 vkid = vkid_hexstr.toInt(&conversion_success, 16);
 
     if(conversion_success) {
-        return setAMParamHotkeyVkid(static_cast<uint8_t>(vkid));
+        return setAmpHotkeyVkid(static_cast<uint8_t>(vkid));
     } else {
         dbgConsole->log({"Failed to convert hexadecimal VKID string into an integer \"",
                         vkid_hexstr, "\""
@@ -203,7 +255,7 @@ QString MainWindow::setAMParamHotkeyVkid(const QString& vkid_hexstr) {
     }
 }
 
-void MainWindow::setAMToHotkey() {
+void MainWindow::setAmToHotkey() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "setActivationMethodToHotkey" };
 
     dbgConsole->log("Set activation method to: hotkey.");
@@ -211,44 +263,46 @@ void MainWindow::setAMToHotkey() {
 
     selectedActivationMethod = ACTIVATION_METHOD::HOTKEY;
 
-    unregisterAMHotkey();
+    unregisterAmpHotkey();
 
     connect(this, &MainWindow::targetHotkeyWasPressed,
             this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
 
     ui->linActivationParameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
 
-    if(amParamHotkeyVkid) {
+    if(ampHotkeyVkid) {
         const QString& vkid_hexstr  {
-            QString { "0x%1" }.arg(amParamHotkeyVkid, 4, 16, QLatin1Char { '0' })
+            QString { "0x%1" }.arg(ampHotkeyVkid, 2, 16, QLatin1Char { '0' })
         };
 
         ui->linActivationParameter->setText(vkid_hexstr);
 
-        registerAMHotkey();
+        registerAmpHotkey();
     }
 
-    insertActivationParameterWidget(hotkeyInput, false);
-    insertActivationParameterWidget(cblHotkeyModifiers, false);
+    ampHotkeyModifiersBitmask = ampwHotkeyModifierDropdown->GetModifierCheckStateAsBitmask();
+
+    insertActivationParameterWidget(ampwHotkeyRecorder, false);
+    insertActivationParameterWidget(ampwHotkeyModifierDropdown, false);
 }
 
-void MainWindow::unsetAMToHotkey() {
-    unregisterAMHotkey();
+void MainWindow::unsetAmToHotkey() {
+    unregisterAmpHotkey();
 
     disconnect(this, &MainWindow::targetHotkeyWasPressed,
                this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
 
-    removeActivationParameterWidget(cblHotkeyModifiers);
-    removeActivationParameterWidget(hotkeyInput);
+    removeActivationParameterWidget(ampwHotkeyModifierDropdown);
+    removeActivationParameterWidget(ampwHotkeyRecorder);
 }
 
-void MainWindow::setAMParamProcessImageName(const QString& process_image_name) {
+void MainWindow::setAmpProcessImageName(const QString& process_image_name) {
     amParamProcessImageName = process_image_name;
     ui->linActivationParameter->setText(amParamProcessImageName);
 }
 
-void MainWindow::setAMToProcessImageName() {
-    QDebugConsoleContext dbg_console_context { dbgConsole, "setAMToProcessImageName" };
+void MainWindow::setAmToProcessImageName() {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "setAmToProcessImageName" };
 
     selectedActivationMethod = ACTIVATION_METHOD::PROCESS_IMAGE;
     ui->linActivationParameter->setPlaceholderText("Image name, e.g. TESV.exe, SkyrimSE.exe, etc");
@@ -261,28 +315,28 @@ void MainWindow::setAMToProcessImageName() {
     timedActivationMethodConnection = connect(timedActivationMethodTimer,   SIGNAL(timeout()),
                                               this,                         SLOT(activateIfTargetProcessRunning()));
 
-    insertActivationParameterWidget(btnSpawnProcessScanner);
+    insertActivationParameterWidget(btnSpawnProcessScanner, false);
     btnSpawnProcessScannerConnection = connect(btnSpawnProcessScanner, &QPushButton::clicked,
                                                std::bind(&MainWindow::spawnProcessScannerDialog, this, ProcessScanner::PROCESS_MODE));
 
     dbgConsole->log("Activation method has been set to process image name.");
 }
 
-void MainWindow::unsetAMToProcessImageName() {
-    QDebugConsoleContext dbg_console_context { dbgConsole, "unsetAMToProcessImageName" };
+void MainWindow::unsetAmToProcessImageName() {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "unsetAmToProcessImageName" };
 
     disconnect(timedActivationMethodConnection);
     removeActivationParameterWidget(btnSpawnProcessScanner);
     disconnect(btnSpawnProcessScannerConnection);
 }
 
-void MainWindow::setAMParamForegroundWindowTitle(const QString& foreground_window_title) {
+void MainWindow::setAmpForegroundWindowTitle(const QString& foreground_window_title) {
     amParamForegroundWindowTitle = foreground_window_title;
     ui->linActivationParameter->setText(amParamForegroundWindowTitle);
 }
 
-void MainWindow::setAMToForegroundWindowTitle() {
-    QDebugConsoleContext dbg_console_context { dbgConsole, "setAMToForegroundWindowTitle" };
+void MainWindow::setAmToForegroundWindowTitle() {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "setAmToForegroundWindowTitle" };
 
     dbgConsole->log("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.");
 
@@ -297,14 +351,17 @@ void MainWindow::setAMToForegroundWindowTitle() {
     timedActivationMethodConnection = connect(timedActivationMethodTimer,   SIGNAL(timeout()),
                                               this,                         SLOT(activateIfForegroundWindowMatchesTarget()));
 
-    insertActivationParameterWidget(btnSpawnProcessScanner);
+    insertActivationParameterWidget(btnStartWindowGrabber, false);
+    insertActivationParameterWidget(btnSpawnProcessScanner, false);
     btnSpawnProcessScannerConnection = connect(btnSpawnProcessScanner, &QPushButton::clicked,
                                                std::bind(&MainWindow::spawnProcessScannerDialog, this, ProcessScanner::WINDOW_MODE));
+
 }
 
-void MainWindow::unsetAMToForegroundWindowTitle() {
+void MainWindow::unsetAmToForegroundWindowTitle() {
     disconnect(timedActivationMethodConnection);
     removeActivationParameterWidget(btnSpawnProcessScanner);
+    removeActivationParameterWidget(btnStartWindowGrabber);
     disconnect(btnSpawnProcessScannerConnection);
 }
 
@@ -369,7 +426,7 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintpt
     MSG* msg { reinterpret_cast<MSG*>(message) };
 
     /* msg->lParam Is a 64-bit integer and stores the VKID of the pressed hotkey in byte 3/8 (little-endian)
-     * and so it cannot be directly compared with amParamHotkeyVkid, as it stores the VKID in byte 1/1 so the
+     * and so it cannot be directly compared with ampHotkeyVkid, as it stores the VKID in byte 1/1 so the
      * comparison will always fail. Instead, lParam should be bitshifted 16 bits to the right so that the VKID
      * is located in byte 1/8, and then bitwise AND with 0xFF should be performed to exclude any other bits that
      * may be present in the 64-bit integer, and leave only the bits in position 1/8 which should be the VKID.
@@ -381,7 +438,7 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintpt
      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
     if (msg->message == WM_HOTKEY) {
-        if(msg->wParam == amParamHotkeyId && ((msg->lParam >> 16) & 0xFF) == amParamHotkeyVkid) {
+        if(msg->wParam == ampHotkeyId && ((msg->lParam >> 16) & 0xFF) == ampHotkeyVkid) {
             emit targetHotkeyWasPressed();
             return true;
         }
@@ -396,6 +453,10 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintpt
     return QMainWindow::nativeEvent(event_type, message, result);
 }
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MainWindow's SLOTS below this line!!!
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void MainWindow::activateBecauseTargetHotkeyWasPressed() {
     if(toggleCursorLock()) {
         dbgConsole->log("Activated cursor lock via hotkey.");
@@ -407,7 +468,10 @@ void MainWindow::activateBecauseTargetHotkeyWasPressed() {
 }
 
 void MainWindow::activateIfTargetProcessRunning() {
-    if(!amParamProcessImageName.size()) return;
+    if(!amParamProcessImageName.size()) {
+        disableCursorLock();
+        return;
+    }
 
     HANDLE process_snapshot { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,  0) };
 
@@ -455,7 +519,10 @@ void MainWindow::activateIfTargetProcessRunning() {
 }
 
 void MainWindow::activateIfForegroundWindowMatchesTarget() {
-    if(!amParamForegroundWindowTitle.size()) return;
+    if(!amParamForegroundWindowTitle.size()) {
+        disableCursorLock();
+        return;
+    }
 
     static bool first_find { true };
 
@@ -486,17 +553,24 @@ void MainWindow::activateIfForegroundWindowMatchesTarget() {
     }
 }
 
+void MainWindow::handleModifierListBitmaskChanged(const quint32& bitmask) {
+    ampHotkeyModifiersBitmask = bitmask;
+}
+
 void MainWindow::changeActivationMethod(int method_index) {
     /* Clear linActivationParameter's text to allow the placeholder text of
      * the selected activation method to be displayed later on.
      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     ui->linActivationParameter->clear();
+    timedActivationMethodTimer->stop();
 
     disableCursorLock(); // Ensure the cursor lock is disabled before switching over to a new activation method.
 
-    unsetAMToHotkey();
-    unsetAMToProcessImageName();
-    unsetAMToForegroundWindowTitle();
+    unsetAmToHotkey();
+    unsetAmToProcessImageName();
+    unsetAmToForegroundWindowTitle();
+
+    static const QList<quint32>& timed_activation_methods_indexes { 2, 3 };
 
     switch(method_index) {
     case 0 :
@@ -507,23 +581,25 @@ void MainWindow::changeActivationMethod(int method_index) {
         break;
 
     case 1 :
-        setAMToHotkey();
+        setAmToHotkey();
         break;
 
     case 2 :
-        setAMToProcessImageName();
+        setAmToProcessImageName();
         break;
 
     case 3 :
-        setAMToForegroundWindowTitle();
+        setAmToForegroundWindowTitle();
         break;
     }
 
-    timedActivationMethodTimer->start(500);
+    if(timed_activation_methods_indexes.contains(method_index)) {
+        timedActivationMethodTimer->start(500);
+    }
 }
 
 bool MainWindow::changeActivationMethod(const QString& method) {
-    static const QMap<QString, int32_t>& resolver {
+    static const QMap<QString, qint32>& resolver {
         { "",        0 },
         { "hotkey",  1 },
         { "image",   2 },
@@ -535,51 +611,18 @@ bool MainWindow::changeActivationMethod(const QString& method) {
     return true;
 }
 
-void MainWindow::handleModifierCheckeStateChange(QStandardItem* item_changed) {
-    const WINAPI_MODIFIER& matching_modifier {
-        QStringToWinApiKbModifier(item_changed->text())
-    };
+void MainWindow::updateUiWithRecordedWindowsHotkey(QHotkeyInput::WindowsHotkey windows_hotkey) {
+    QDebugConsoleContext dbg_console_context { dbgConsole, "updateUiWithRecordedWindowsHotkey" };
 
-    if(item_changed->checkState() == Qt::Checked) {
-        amParamHotkeyModifiers |= matching_modifier;
-    } else {
-        amParamHotkeyModifiers &= ~matching_modifier;
-    }
+    ui->linActivationParameter->setText(QString::number(windows_hotkey.Vkid, 16));
+    ampwHotkeyModifierDropdown->SetModifierCheckStateFromBitmask(windows_hotkey.Modifiers);
+
+    dbgConsole->log({"Ui has been set to use recorded hotkey: ", windows_hotkey.ToString()});
 }
 
-void MainWindow::handleHotkeyRecorded(QHotkeyInput::WindowsHotkey windows_hotkey) {
-    setAMParamHotkeyVkid(windows_hotkey.Vkid);
-    amParamHotkeyModifiers = windows_hotkey.Modifiers;
-    dbgConsole->log({"Recorded new activation hotke: ", windows_hotkey.ToString()});
+void MainWindow::updateHotkeyInputWithNewModifierBitmask(const quint32& new_modifier_bitmask) {
+    ampwHotkeyRecorder->clear();
 }
-
-/*
-void MainWindow::changeHotkeyModifier(int modifier_index) {
-
-    switch(modifier_index) {
-    case(0) :
-        amParamHotkeyModifier = HOTKEY_MOD::NONE;
-        break;
-
-    case(1) :
-        amParamHotkeyModifier = HOTKEY_MOD::ALT;
-        break;
-
-    case(2) :
-        amParamHotkeyModifier = HOTKEY_MOD::CONTROL;
-        break;
-
-    case(3) :
-        amParamHotkeyModifier = HOTKEY_MOD::SHIFT;
-        break;
-
-    case(4) :
-        amParamHotkeyModifier = HOTKEY_MOD::WIN;
-        break;
-    }
-
-}
-*/
 
 void MainWindow::editActivationMethodParameter() {
     if(ui->btnEditActivationParameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
@@ -587,32 +630,40 @@ void MainWindow::editActivationMethodParameter() {
         ui->linActivationParameter->setEnabled(true);
         ui->cbxActivationMethod->setEnabled(false);
 
+        btnSpawnProcessScanner->setEnabled(true);
+        btnStartWindowGrabber->setEnabled(true);
+
         if(selectedActivationMethod == ACTIVATION_METHOD::HOTKEY) {
-            cblHotkeyModifiers->setEnabled(true);
-            hotkeyInput->setEnabled(true);
-            hotkeyInput->StartRecording();
+            ampwHotkeyModifierDropdown->setEnabled(true);
+            ampwHotkeyRecorder->setEnabled(true);
+            ampwHotkeyRecorder->StartRecording();
         }
     } else if(ui->btnEditActivationParameter->text() == "Confirm") {
         ui->btnEditActivationParameter->setText("Edit");
         ui->linActivationParameter->setEnabled(false);
         ui->cbxActivationMethod->setEnabled(true);
 
-        cblHotkeyModifiers->setEnabled(false);
-        hotkeyInput->setEnabled(false);
-        hotkeyInput->StopRecording();
+        btnSpawnProcessScanner->setEnabled(false);
+        btnStartWindowGrabber->setEnabled(false);
+
+        ampwHotkeyModifierDropdown->setEnabled(false);
+        ampwHotkeyRecorder->setEnabled(false);
+        ampwHotkeyRecorder->StopRecording();
 
         switch(selectedActivationMethod) {
         case ACTIVATION_METHOD::HOTKEY : {
-            setAMParamHotkeyVkid(ui->linActivationParameter->text());
+            ampHotkeyModifiersBitmask = ampwHotkeyModifierDropdown->GetModifierCheckStateAsBitmask();
+            setAmpHotkeyVkid(ui->linActivationParameter->text());
+            ampwHotkeyRecorder->clear();
             break;
         }
 
         case ACTIVATION_METHOD::PROCESS_IMAGE :
-            setAMParamProcessImageName(ui->linActivationParameter->text());
+            setAmpProcessImageName(ui->linActivationParameter->text());
             break;
 
         case ACTIVATION_METHOD::WINDOW_TITLE :
-            setAMParamForegroundWindowTitle(ui->linActivationParameter->text());
+            setAmpForegroundWindowTitle(ui->linActivationParameter->text());
             break;
 
         case ACTIVATION_METHOD::NOTHING :
@@ -621,73 +672,80 @@ void MainWindow::editActivationMethodParameter() {
     }
 }
 
-void MainWindow::startForegroundWindowGrabber() {
-    static QTimer* grab_window_timer { nullptr };
+void MainWindow::foregroundWindowGrabberTimerTimeout() {
+    const auto& stop_and_reset{
+        [&]() -> void {
+            btnStartWindowGrabber->setText("Grab");
 
-    if(grab_window_timer == nullptr) {
-        grab_window_timer = new QTimer { this };
+            windowGrabberTimer->stop();
+            windowGrabberTimerTimeoutCounter = 0;
 
-        connect(grab_window_timer, &QTimer::timeout,
-                [this]() -> void {
-                    static const uint32_t max_timeouts { 15 };
-                    static uint32_t timeout_counter { 0 };
+            ui->linActivationParameter->clear();
+            ui->linActivationParameter->setEnabled(true);
+            ui->btnEditActivationParameter->setEnabled(true);
+            btnSpawnProcessScanner->setEnabled(true);
+        }};
 
-                    const auto& reset_window_grabber {
-                        [&]() -> void {
-                            grab_window_timer->stop();
-                            timeout_counter = 0;
-                            ui->linActivationParameter->clear();
-                            ui->btnEditActivationParameter->setEnabled(true);
-                            ui->cbxActivationMethod->setEnabled(true);
-                        }};
+    if(++windowGrabberTimerTimeoutCounter > windowGrabberTimerMaxTimeouts) {
+        stop_and_reset();
+    } else {
+        beepBoop({{200, 20}});
 
-                    if(++timeout_counter > max_timeouts) {
-                        reset_window_grabber();
-                    } else {
-                        beepBoop({{200, 20}});
+        ui->linActivationParameter->setText(
+                    "Switch to target window within timeframe: "
+                    + QString::number(windowGrabberTimerTimeoutCounter)
+                    + " / "
+                    + QString::number(windowGrabberTimerMaxTimeouts)
+                    );
 
-                        ui->linActivationParameter->setText(
-                            "Switch to target window within timeframe: "
-                            + QString::number(timeout_counter)
-                            + " / "
-                            + QString::number(max_timeouts)
-                        );
+        HWND foreground_window { GetForegroundWindow() };
 
-                        HWND foreground_window { GetForegroundWindow() };
+        // Other window has been selected, as foreground_window doesn't match this program's window.
+        if(foreground_window != HWND(winId())) {
+            beepBoop({{900, 20}, {900, 20}});
+            stop_and_reset();
 
-                        // Other window has been selected, as foreground_window doesn't match this program's window.
-                        if(foreground_window != HWND(winId())) {
-                            beepBoop({{900, 20}, {900, 20}});
-                            reset_window_grabber();
+            char window_title[256];
+            ZeroMemory(window_title, sizeof(window_title));
+            qint32 bytes_written { GetWindowText(foreground_window, window_title, sizeof(window_title)) };
+            dbgConsole->log({"GetWindowText() wrote ", QString::number(bytes_written), " bytes to char window_title[256]"});
 
-                            char window_title[256];
-                            std::fill(window_title, window_title + sizeof(window_title), 0x00);
-                            int32_t bytes_written { GetWindowText(foreground_window, window_title, sizeof(window_title)) };
-                            dbgConsole->log({"GetWindowText() wrote ", QString::number(bytes_written), " bytes to char window_title[256]"});
-
-                            amParamForegroundWindowTitle = QString { window_title };
-                            ui->linActivationParameter->setText(amParamForegroundWindowTitle);
-                        }
-                    }
-                });
+            ui->linActivationParameter->setText(window_title);
+        }
     }
+}
 
-    if(selectedActivationMethod == ACTIVATION_METHOD::WINDOW_TITLE
-            && ui->btnEditActivationParameter->text() == "Edit"
-            && ui->btnEditActivationParameter->isEnabled()
-            ) {
+void MainWindow::onWindowGrabberButtonClicked() {
+    if(btnStartWindowGrabber->text() == "Grab") {
+        btnStartWindowGrabber->setText("Stop");
+
+        ui->linActivationParameter->setEnabled(false);
         ui->btnEditActivationParameter->setEnabled(false);
-        ui->cbxActivationMethod->setEnabled(false);
-        grab_window_timer->start(500);
+        btnSpawnProcessScanner->setEnabled(false);
+
+        windowGrabberTimer->start(500);
+    } else if(btnStartWindowGrabber->text() == "Stop") {
+        btnStartWindowGrabber->setText("Grab");
+
+        windowGrabberTimer->stop();
+        windowGrabberTimerTimeoutCounter = 0;
+
+        ui->linActivationParameter->clear();
+        ui->linActivationParameter->setEnabled(true);
+        ui->btnEditActivationParameter->setEnabled(true);
+        btnSpawnProcessScanner->setEnabled(true);
     }
 }
 
 void MainWindow::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE process_scanner_scope) {
-    dbgConsole->log("Called ProcessScannerDialog::show");
+    QDebugConsoleContext { dbgConsole, "spawnProcessScannerDialog" };
 
     if(processScannerDialog == nullptr) {
+        dbgConsole->log("Constructing new ProcessScannerDialog instance.");
+
         processScannerDialog = new ProcessScannerDialog(process_scanner_scope, this);
         processScannerDialog->setAttribute(Qt::WA_DeleteOnClose);
+
         ui->btnEditActivationParameter->setEnabled(false);
         ui->cbxActivationMethod->setEnabled(false);
 
@@ -699,13 +757,6 @@ void MainWindow::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE process_sc
 
         connect(processScannerDialog, &ProcessScannerDialog::treeSelectionMade, [&](const QString& selection) -> void {
             ui->linActivationParameter->setText(selection);
-
-            if(selectedActivationMethod == ACTIVATION_METHOD::WINDOW_TITLE) {
-                setAMParamForegroundWindowTitle(selection);
-            } else if(selectedActivationMethod == ACTIVATION_METHOD::PROCESS_IMAGE) {
-                setAMParamProcessImageName(selection);
-            }
-
             delete processScannerDialog;
             processScannerDialog = nullptr;
         });
@@ -727,41 +778,42 @@ MainWindow::MainWindow(QWidget* parent)
     :
       // Debug Console & Related Widgets Initialization
 
-      QMainWindow                   { parent                     },
-      ui                            { new Ui::MainWindow         },
+      QMainWindow                         { parent                     },
+      ui                                  { new Ui::MainWindow         },
 
-      dbgConsole                    { new QDebugConsole { this } },
-      vblDebugConsoleLayout         { new QVBoxLayout            },
-      dbgConsoleContextMenu         { new QMenu { dbgConsole }   },
+      dbgConsole                          { new QDebugConsole { this } },
+      vblDebugConsoleLayout               { new QVBoxLayout            },
+      dbgConsoleContextMenu               { new QMenu { dbgConsole }   },
 
-      jsonConfigFilePath            { "./defaults.json"          },
+      jsonConfigFilePath                  { "./defaults.json"          },
 
-      selectedActivationMethod      { ACTIVATION_METHOD::NOTHING },
+      selectedActivationMethod            { ACTIVATION_METHOD::NOTHING },
 
       // Hotkey activation method member variables initialization
-      cblHotkeyModifiers            { new QCheckBoxList { this } },
-      hotkeyInput                   { new QHotkeyInput  { this } },
-      amParamHotkeyModifiers        { WINMOD_NULLMOD             },
-      amParamHotkeyId               { 0x1A4                      },
-      amParamHotkeyVkid             { 0x000                      },
+      ampwHotkeyModifierDropdown          { new QKbModifierList {this} },
+      ampwHotkeyRecorder                  { new QHotkeyInput  { this } },
+      ampHotkeyModifiersBitmask           { WINMOD_NULLMOD             },
+      ampHotkeyVkid                       { 0x000                      },
+      ampHotkeyId                         { 0x1A4                      },
 
       // Process scanner member variables initialization.
-      processScannerDialog          { nullptr                    },     // ProcessScannerDialog instance, must be nullptr as spawnProcessScannerDialog takes care of construction and destruction.
-      btnSpawnProcessScanner        { new QPushButton   { this } },     // QPushButton connected to spawnProcessScannerDialog further down in the constructor.
-      amParamProcessImageName       { QString { "" }             },
-      amParamForegroundWindowTitle  { QString { "" }             },
+      processScannerDialog                { nullptr                    },     // ProcessScannerDialog instance, must be nullptr as spawnProcessScannerDialog takes care of construction and destruction.
+      btnSpawnProcessScanner              { new QPushButton   { this } },     // QPushButton connected to spawnProcessScannerDialog further down in the constructor.
+      amParamProcessImageName             { QString { "" }             },
+      amParamForegroundWindowTitle        { QString { "" }             },
 
-      timedActivationMethodTimer    { new QTimer        { this } },
+      // Foreground window grabber
+      windowGrabberTimerMaxTimeouts       { 15   },
+      windowGrabberTimerTimeoutCounter    { NULL },
+      windowGrabberTimer                  { new QTimer        { this } },
+      btnStartWindowGrabber               { new QPushButton   { this } },
 
-      muteBeepBoop                  { false                      }
+      timedActivationMethodTimer          { new QTimer        { this } },
 
-      // Not needed
-      // btnGrabProcessImage      { new QPushButton   { this }  },
-      // btnGrabForegroundWindow  { new QPushButton   { this }  }
+      muteBeepBoop                        { false                      }
 
 {
     ui->setupUi(this);
-
 
     // Configure Main Window Flags & Set Initial Window Size
     // --------------------------------------------------
@@ -780,67 +832,80 @@ MainWindow::MainWindow(QWidget* parent)
     GetWindowRect(desktop_window_handle, &desktop_window_rect);
     CloseHandle(desktop_window_handle);
 
-    resize(20 * desktop_window_rect.right / 100, 16 * desktop_window_rect.bottom / 100);
+    resize(23 * desktop_window_rect.right / 100, 16 * desktop_window_rect.bottom / 100);
 
     // Debug console layout configuration.
     vblDebugConsoleLayout->addWidget(dbgConsole);
     ui->grpDebugConsole->setLayout(vblDebugConsoleLayout);
 
-    cblHotkeyModifiers->setEnabled(false);
-    cblHotkeyModifiers->setHidden(true);
-    cblHotkeyModifiers->setMinimumWidth(90);
-    cblHotkeyModifiers->AddCheckableItems({"ALT", "CONTROL", "SHIFT", "WIN"}, Qt::Checked);
+    // Set ampwHotkeyModifierDropdown initial values.
+    // QStandardItem* header_item { new QStandardItem { "Modifiers" } };
+    // header_item->setCheckable(false);
+    // ampwHotkeyModifierDropdown->StandardItemModel->insertRow(0, header_item);
+    ampwHotkeyModifierDropdown->setEnabled(false);
+    ampwHotkeyModifierDropdown->setHidden(true);
+    ampwHotkeyModifierDropdown->setMinimumWidth(90);
+    ampwHotkeyModifierDropdown->addItem("Modifiers");
+    ampwHotkeyModifierDropdown->AddItemsFromBitmask(WINMOD_ALT | WINMOD_CONTROL | WINMOD_SHIFT | WINMOD_WIN);
 
-    hotkeyInput->setHidden(true);
+    // ampwHotkeyModifierDropdown->AddCheckableItems({"ALT", "CONTROL", "SHIFT", "WIN"}, Qt::Unchecked);
+
+    // Set ampwHotkeyRecorder initial values.
+    ampwHotkeyRecorder->setHidden(true);
+    ampwHotkeyRecorder->setPlaceholderText("Hotkey Recorder");
 
     // btnSpawnProcessScanner initial values.
     btnSpawnProcessScanner->setText("Select");
     btnSpawnProcessScanner->setEnabled(false);
     btnSpawnProcessScanner->setHidden(true);
 
+    btnStartWindowGrabber->setText("Grab");
+    btnStartWindowGrabber->setEnabled(false);
+    btnStartWindowGrabber->setHidden(true);
+
     // Event Connections
     // ====================================================================================================
-    // Class SLOT() connections.
-
     // Static QML UI File Widgets --------------------------------------------------
-    connect(ui->cbxActivationMethod,                SIGNAL(currentIndexChanged(int)),
-            this,                                   SLOT(changeActivationMethod(int)));
+    connect(ui->cbxActivationMethod,           SIGNAL(currentIndexChanged(int)),
+            this,                              SLOT(changeActivationMethod(int)));
 
-    connect(ui->btnEditActivationParameter,         SIGNAL(clicked()),
-            this,                                   SLOT(editActivationMethodParameter()));
+    connect(ui->btnEditActivationParameter,    SIGNAL(clicked()),
+            this,                              SLOT(editActivationMethodParameter()));
 
-    connect(ui->btnMuteBeepBoop,                    SIGNAL(clicked()),
-            this,                                   SLOT(toggleMuteBeepBoop()));
+    connect(ui->btnMuteBeepBoop,               SIGNAL(clicked()),
+            this,                              SLOT(toggleMuteBeepBoop()));
 
-    // Dynamic Class Widgets --------------------------------------------------
-    // connect(cbxHotkeyModifier,                      SIGNAL(currentIndexChanged(int)),
-    //         this,                                   SLOT(changeHotkeyModifier(int)));
+    connect(ampwHotkeyRecorder,                SIGNAL(WindowsHotkeyRecorded(QHotkeyInput::WindowsHotkey)),
+            this,                              SLOT(updateUiWithRecordedWindowsHotkey(QHotkeyInput::WindowsHotkey)));
 
-    connect(cblHotkeyModifiers->StandardItemModel,      SIGNAL(itemChanged(QStandardItem*)),
-            this,                                       SLOT(handleModifierSelectionChanged(QStandardItem*)));
+    connect(ampwHotkeyModifierDropdown,        SIGNAL(ModifierBitmaskChanged(const quint32&)),
+            this,                              SLOT(updateHotkeyInputWithNewModifierBitmask(const quint32&)));
 
-    connect(hotkeyInput,                                SIGNAL(WindowsHotkeyRecorded(QHotkeyInput::WindowsHotkey)),
-            this,                                       SLOT(handleHotkeyRecorded(QHotkeyInput::WindowsHotkey)));
+    connect(windowGrabberTimer,                SIGNAL(timeout()),
+            this,                              SLOT(foregroundWindowGrabberTimerTimeout()));
+
+    connect(btnStartWindowGrabber,             SIGNAL(clicked()),
+            this,                              SLOT(onWindowGrabberButtonClicked()));
 
     jsonConfigValueHandlers = {
         {"title", [&](const QString&, QJsonValueRef value) -> bool {
              if(!value.isString()) return false;
              const auto& value_str { value.toString() };
-             if(value_str.size()) setAMParamForegroundWindowTitle(value.toString());
+             if(value_str.size()) setAmpForegroundWindowTitle(value.toString());
              return true;
          }},
 
         {"image", [&](const QString&, QJsonValueRef value) -> bool {
              if(!value.isString()) return false;
              const auto& value_str { value.toString() };
-             if(value_str.size()) setAMParamProcessImageName(value_str);
+             if(value_str.size()) setAmpProcessImageName(value_str);
              return true;
          }},
 
         {"vkid", [&](const QString&, QJsonValueRef value) -> bool {
              if(!value.isString()) return false;
              const auto& value_str { value.toString() };
-             if(value_str.size()) return setAMParamHotkeyVkid(value_str).size();
+             if(value_str.size()) return setAmpHotkeyVkid(value_str).size();
              return true;
          }},
 
@@ -861,7 +926,7 @@ MainWindow::MainWindow(QWidget* parent)
     QFileInfo json_file_info { jsonConfigFilePath };
 
     if(json_file_info.exists() && json_file_info.isFile()) {
-        loadJsonConfig();
+        loadJsonConfig(jsonConfigFilePath);
     } else {
         if(dumpJsonConfigTemplate()) {
             QMessageBox::information(this, "New JSON File Generated!", "No JSON config file was found, so a new one has been generated at this location: \"" + json_file_info.absoluteFilePath() + "\" - please fill it in if you wish to have default settings.");
@@ -876,6 +941,7 @@ MainWindow::MainWindow(QWidget* parent)
         dbgConsole->log("Cannot open style_sheet.qss, using default Windows style.", QDebugConsole::LL_WARNING);
     }
 
+    /*
     ui->btnEditActivationParameter->installEventFilter(
                 new LambdaEventFilter<>(this, [](QObject* parent, QObject* watched, QEvent* event) -> bool {
                     MainWindow* main_window { reinterpret_cast<MainWindow*>(parent) };
@@ -892,6 +958,7 @@ MainWindow::MainWindow(QWidget* parent)
 
                     return false;
                 }));
+                */
 }
 
 MainWindow::~MainWindow() {

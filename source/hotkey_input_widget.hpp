@@ -21,6 +21,8 @@ public:
 
         bool operator==(const WindowsHotkey&) const;
         bool operator!=(const WindowsHotkey&) const;
+        operator QString() const;
+        operator bool() const;
 
         QString ToString() const;
         void Clear();
@@ -28,6 +30,9 @@ public:
 
 signals:
     void WindowsHotkeyRecorded(QHotkeyInput::WindowsHotkey);
+
+protected:
+    virtual bool event(QEvent*) override;
 
 private:
     WindowsHotkey lastWindowsHotkeyEmitted;
@@ -40,8 +45,9 @@ public slots:
     void StopRecording();
 
 public:
-    const bool& IsRecording;
-    virtual bool event(QEvent*) override;
+    void UpdateWindowsHotkey(const WindowsHotkey& windows_hotkey);
+
+    bool IsRecording() const;
 
     QHotkeyInput(QWidget* = nullptr);
 };

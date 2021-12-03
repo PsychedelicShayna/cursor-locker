@@ -1,6 +1,14 @@
 #include "winapi_utilities.hpp"
 
-WINAPI_MODIFIER QStringToWinApiKbModifier(const QString& modifier_string) {
+const QList<WINAPI_MODIFIER> WINAPI_MODIFIER_QLIST {
+    WINMOD_ALT, WINMOD_CONTROL, WINMOD_SHIFT, WINMOD_WIN
+};
+
+WINAPI_MODIFIER QStringToWinApiKbModifier(QString modifier_string) {
+    for(auto& character : modifier_string) {
+        character = character.toUpper();
+    }
+
     static const QMap<QString, WINAPI_MODIFIER>& conversion_table {
         { "ALT",     WINMOD_ALT     },
         { "CTRL",    WINMOD_CONTROL },
@@ -13,7 +21,7 @@ WINAPI_MODIFIER QStringToWinApiKbModifier(const QString& modifier_string) {
     return conversion_table.contains(modifier_string) ? conversion_table[modifier_string] : WINMOD_NULLMOD;
 }
 
-WINAPI_MODIFIER QtKeyToWinApiKbModifier(const Qt::Key& qtkey) {
+WINAPI_MODIFIER QtKeyModifierToWinApiKbModifier(const Qt::Key& qtkey) {
     static const QMap<Qt::Key, WINAPI_MODIFIER>& conversion_table {
         { Qt::Key_Alt,        WINMOD_ALT     },
         { Qt::Key_Control,    WINMOD_CONTROL },
@@ -26,7 +34,7 @@ WINAPI_MODIFIER QtKeyToWinApiKbModifier(const Qt::Key& qtkey) {
 
 QString WinApiKbModifierToQString(const WINAPI_MODIFIER& winapi_modifier, const bool& capitalized) {
     static const QMap<WINAPI_MODIFIER, QString>& conversion_table {
-        { WINMOD_CONTROL,    "Control" },
+        { WINMOD_CONTROL,    "Ctrl" },
         { WINMOD_SHIFT,      "Shift"   },
         { WINMOD_ALT,        "Alt"     },
         { WINMOD_WIN,        "Win"     }
@@ -63,4 +71,8 @@ QString WinApiKbModifierBitmaskToQString(const quint32& winapi_modifier, const b
     return string_sequence;
 }
 
+QString QtKeyModifierToQString(const Qt::Key& modifier_qtkey, const bool& capitalize) {
+    const WINAPI_MODIFIER& qtkey_modifier { QtKeyModifierToWinApiKbModifier(modifier_qtkey) };
+    return WinApiKbModifierToQString(qtkey_modifier, capitalize);
+}
 
