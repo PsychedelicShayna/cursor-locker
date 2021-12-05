@@ -34,7 +34,7 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <layout class="QHBoxLayout" name="hlActivationMethod" stretch="5,0">
+        <layout class="QHBoxLayout" name="hlActivationMethod" stretch="5,0,0">
          <item>
           <widget class="QComboBox" name="cbxActivationMethod">
            <property name="minimumSize">
@@ -50,23 +50,42 @@
            </item>
            <item>
             <property name="text">
-             <string>Keybinding</string>
+             <string>Hotkey</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>Process Image</string>
+             <string>Process Running</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>Window Title</string>
+             <string>Foreground Window Title</string>
             </property>
            </item>
           </widget>
          </item>
          <item>
+          <widget class="QPushButton" name="btnSettings">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Settings</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="btnMuteBeepBoop">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>25</height>
+            </size>
+           </property>
            <property name="text">
             <string>Mute</string>
            </property>
@@ -88,6 +107,12 @@
          </item>
          <item>
           <widget class="QPushButton" name="btnEditActivationParameter">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>25</height>
+            </size>
+           </property>
            <property name="text">
             <string>Edit</string>
            </property>

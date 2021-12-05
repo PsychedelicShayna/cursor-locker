@@ -295,6 +295,15 @@ ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& sca
 {
     ui->setupUi(this);
 
+    setWindowFlags(
+                Qt::Dialog
+                | Qt::CustomizeWindowHint
+                | Qt::WindowTitleHint
+                | Qt::WindowCloseButtonHint
+                );
+
+    setAttribute(Qt::WA_DeleteOnClose);
+
     /* Initialize & Configure Debug Console * * * * * * * * * * * * */
     QVBoxLayout* grpConsoleLayout { new QVBoxLayout { grpConsole } };
     grpConsoleLayout->addWidget(dbgConsole);

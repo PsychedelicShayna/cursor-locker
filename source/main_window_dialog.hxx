@@ -36,12 +36,14 @@
 #include <string>
 #include <tuple>
 
+
+#include "process_scanner_dialog.hxx"
+#include "json_settings_dialog.hxx"
+
+#include "winapi_utilities.hpp"
 #include "debug_console_widget.hpp"
 #include "hotkey_input_widget.hpp"
-#include "process_scanner_dialog.hxx"
 #include "check_box_list_widget.hpp"
-#include "winapi_utilities.hpp"
-
 
 namespace Ui {
     class MainWindow;
@@ -61,20 +63,7 @@ private:
     QAction*    dbgCCMActionClear;
     QMenu*      dbgCCMSubMenuLogLevels;
 
-    QList<QPair<QString, std::function<bool(const QString&, QJsonValueRef)>>> jsonConfigValueHandlers;
-
     QString jsonConfigFilePath;
-
-    /* Loads the JSON config file pointed to by jsonConfigFilePath, and gives each
-     * key and its value to the matching handler inside of jsonConfigValueHandlers.
-     * If any handler returned false, the return value is false, and true if all true.
-     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-    bool loadJsonConfig(const QString&);    // Takes the path to the json file directly.
-    bool loadJsonConfig();                  // Overload that passes jsonConfigFilePath as the file path.
-
-    bool dumpJsonConfigTemplate(const QString&);
-    bool dumpJsonConfigTemplate();
-
 
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      * Stores the currently selected activation method as an ENUM value. This can be reliably used
@@ -146,9 +135,11 @@ private:
     QTimer*                    timedActivationMethodTimer;         // Timer that executes the activation method slot that it's connected to, when applicable.
     QMetaObject::Connection    timedActivationMethodConnection;    // Stores the connection between timedActivationMethodTimer's timeout signal, and the activation method slot.
 
+    JsonSettingsDialog*    jsonSettingsDialog;
 
     // Loads a QSS stylesheet from a file, and applies it.
     bool loadStylesheetFile(const std::string&);
+
 
     // Better method for creating this sound should be found in the future.
     // Allows the sequential passing of multiple frequency/durations to the Windows Beep() function.
@@ -213,6 +204,8 @@ private slots:
     void onWindowGrabberButtonClicked();
 
     void spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE);
+
+    void spawnSettingsDialog();
 
     void setMuteBeepBoopState(bool);
     void toggleMuteBeepBoop();
