@@ -18,6 +18,7 @@ SOURCES +=                              \
     source/debug_console_widget.cpp     \
     source/hotkey_input_widget.cpp      \
     source/process_scanner.cpp          \
+    source/vkid_table_dialog.cxx \
     source/winapi_utilities.cpp
 
 HEADERS +=                              \
@@ -28,12 +29,14 @@ HEADERS +=                              \
     source/debug_console_widget.hpp     \
     source/hotkey_input_widget.hpp      \
     source/process_scanner.hpp          \
+    source/vkid_table_dialog.hxx \
     source/winapi_utilities.hpp
 
 FORMS +=                                \
     source/main_window_dialog.ui        \
     source/process_scanner_dialog.ui    \
     source/json_settings_dialog.ui      \
+    source/vkid_table_dialog.ui
 
 LIBS += \
     -lUser32

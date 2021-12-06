@@ -139,6 +139,7 @@ void MainWindow::setAmToHotkey() {
 
     insertActivationParameterWidget(ampwHotkeyRecorder, false);
     insertActivationParameterWidget(ampwHotkeyModifierDropdown, false);
+    insertActivationParameterWidget(btnSpawnVkidTableDialog);
 }
 
 void MainWindow::unsetAmToHotkey() {
@@ -147,8 +148,9 @@ void MainWindow::unsetAmToHotkey() {
     disconnect(this, &MainWindow::targetHotkeyWasPressed,
                this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
 
-    removeActivationParameterWidget(ampwHotkeyModifierDropdown);
     removeActivationParameterWidget(ampwHotkeyRecorder);
+    removeActivationParameterWidget(ampwHotkeyModifierDropdown);
+    removeActivationParameterWidget(btnSpawnVkidTableDialog);
 }
 
 void MainWindow::setAmpProcessImageName(const QString& process_image_name) {
@@ -174,6 +176,7 @@ void MainWindow::setAmToProcessImageName() {
                                               this,                         SLOT(activateIfTargetProcessRunning()));
 
     insertActivationParameterWidget(btnSpawnProcessScanner, false);
+
     btnSpawnProcessScannerConnection = connect(btnSpawnProcessScanner, &QPushButton::clicked,
                                                std::bind(&MainWindow::spawnProcessScannerDialog, this, ProcessScanner::PROCESS_MODE));
 
@@ -616,9 +619,21 @@ void MainWindow::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE process_sc
             delete processScannerDialog;
             processScannerDialog = nullptr;
         });
-    }
 
-    processScannerDialog->show();
+        processScannerDialog->show();
+    }
+}
+
+void MainWindow::spawnVkidTableDialog() {
+    if(vkidTableDialog == nullptr) {
+        vkidTableDialog = new VkidTableDialog { this };
+
+        connect(vkidTableDialog, &VkidTableDialog::destroyed, [&]() -> void {
+            vkidTableDialog = nullptr;
+        });
+
+        vkidTableDialog->show();
+    }
 }
 
 void MainWindow::spawnSettingsDialog() {
@@ -646,40 +661,44 @@ MainWindow::MainWindow(QWidget* parent)
     :
       // Debug Console & Related Widgets Initialization
 
-      QMainWindow                         { parent                     },
-      ui                                  { new Ui::MainWindow         },
+      QMainWindow                         { parent                       },
+      ui                                  { new Ui::MainWindow           },
 
-      dbgConsole                          { new QDebugConsole { this } },
-      vblDebugConsoleLayout               { new QVBoxLayout            },
-      dbgConsoleContextMenu               { new QMenu { dbgConsole }   },
+      dbgConsole                          { new QDebugConsole { this }   },
+      vblDebugConsoleLayout               { new QVBoxLayout              },
+      dbgConsoleContextMenu               { new QMenu { dbgConsole }     },
 
-      jsonConfigFilePath                  { "./defaults.json"          },
+      jsonConfigFilePath                  { "./defaults.json"            },
 
-      selectedActivationMethod            { ACTIVATION_METHOD::NOTHING },
+      selectedActivationMethod            { ACTIVATION_METHOD::NOTHING   },
 
       // Hotkey activation method member variables initialization
-      ampwHotkeyModifierDropdown          { new QKbModifierList {this} },
-      ampwHotkeyRecorder                  { new QHotkeyInput  { this } },
-      ampHotkeyModifiersBitmask           { WINMOD_NULLMOD             },
-      ampHotkeyVkid                       { 0x000                      },
-      ampHotkeyId                         { 0x1A4                      },
+      ampwHotkeyModifierDropdown          { new QKbModifierList { this } },
+      ampwHotkeyRecorder                  { new QHotkeyInput    { this } },
+
+      vkidTableDialog                     { nullptr                      },
+      btnSpawnVkidTableDialog             { new QPushButton { this }     },
+
+      ampHotkeyModifiersBitmask           { WINMOD_NULLMOD               },
+      ampHotkeyVkid                       { 0x000                        },
+      ampHotkeyId                         { 0x1A4                        },
 
       // Process scanner member variables initialization.
-      processScannerDialog                { nullptr                    },     // ProcessScannerDialog instance, must be nullptr as spawnProcessScannerDialog takes care of construction and destruction.
-      btnSpawnProcessScanner              { new QPushButton   { this } },     // QPushButton connected to spawnProcessScannerDialog further down in the constructor.
-      amParamProcessImageName             { QString { "" }             },
-      amParamForegroundWindowTitle        { QString { "" }             },
+      processScannerDialog                { nullptr                      },     // ProcessScannerDialog instance, must be nullptr as spawnProcessScannerDialog takes care of construction and destruction.
+      btnSpawnProcessScanner              { new QPushButton     { this } },     // QPushButton connected to spawnProcessScannerDialog further down in the constructor.
+      amParamProcessImageName             { QString { "" }               },
+      amParamForegroundWindowTitle        { QString { "" }               },
 
       // Foreground window grabber
       windowGrabberTimerMaxTimeouts       { 15   },
       windowGrabberTimerTimeoutCounter    { NULL },
-      windowGrabberTimer                  { new QTimer        { this } },
-      btnStartWindowGrabber               { new QPushButton   { this } },
+      windowGrabberTimer                  { new QTimer         { this }  },
+      btnStartWindowGrabber               { new QPushButton    { this }  },
 
-      timedActivationMethodTimer          { new QTimer        { this } },
-      jsonSettingsDialog                  { nullptr                    },
+      timedActivationMethodTimer          { new QTimer         { this }  },
+      jsonSettingsDialog                  { nullptr                      },
 
-      muteBeepBoop                        { false                      }
+      muteBeepBoop                        { false                        }
 
 {
     ui->setupUi(this);
@@ -695,15 +714,8 @@ MainWindow::MainWindow(QWidget* parent)
                 | Qt::WindowMaximizeButtonHint
                 );
 
-    HWND desktop_window_handle { GetDesktopWindow() };
-    RECT desktop_window_rect;
+    resize(static_cast<qint32>(minimumWidth() * 1.2), height());
 
-    GetWindowRect(desktop_window_handle, &desktop_window_rect);
-    CloseHandle(desktop_window_handle);
-
-    resize(23 * desktop_window_rect.right / 100, 16 * desktop_window_rect.bottom / 100);
-
-    // Debug console layout configuration.
     vblDebugConsoleLayout->addWidget(dbgConsole);
     ui->grpDebugConsole->setLayout(vblDebugConsoleLayout);
 
@@ -729,6 +741,11 @@ MainWindow::MainWindow(QWidget* parent)
     btnStartWindowGrabber->setHidden(true);
     btnStartWindowGrabber->setMinimumHeight(25);
 
+    btnSpawnVkidTableDialog->setText("VKID Table");
+    btnSpawnVkidTableDialog->setMinimumHeight(25);
+    btnSpawnVkidTableDialog->setEnabled(false);
+    btnSpawnVkidTableDialog->setHidden(true);
+
     // Event Connections
     // ====================================================================================================
     // Static QML UI File Widgets --------------------------------------------------
@@ -752,6 +769,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     connect(btnStartWindowGrabber,             SIGNAL(clicked()),
             this,                              SLOT(onWindowGrabberButtonClicked()));
+
+    connect(btnSpawnVkidTableDialog,           SIGNAL(clicked()),
+            this,                              SLOT(spawnVkidTableDialog()));
 
     connect(ui->btnSettings,                   SIGNAL(clicked()),
             this,                              SLOT(spawnSettingsDialog()));

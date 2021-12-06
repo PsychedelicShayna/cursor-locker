@@ -274,16 +274,10 @@ JsonSettingsDialog::JsonSettingsDialog(const QString& json_config_file_path, QWi
     GetWindowRect(desktop_window_handle, &desktop_window_rect);
     CloseHandle(desktop_window_handle);
 
-    // Determine initial window width/height baced on a percentage of the monitor size.
-    const qint32 initial_width  { 10 * desktop_window_rect.right  / 100 };
-    const qint32 initial_height { 20 * desktop_window_rect.bottom / 100 };
-
-    setMaximumHeight(initial_height);         // Set the maximum height to the initial height, to prevent vertical resizing.
-    resize(initial_width, initial_height);    // Resze the window to the determined initial sizes.5
-
     hotkeyModifierList->addItem("Modifiers");
     hotkeyModifierList->AddItemsFromBitmask(WINMOD_CONTROL | WINMOD_ALT | WINMOD_SHIFT | WINMOD_WIN);
     hotkeyModifierList->setMinimumWidth(90);
+    hotkeyModifierList->setMinimumHeight(25);
     ui->hlayoutKeyboardShortcut->insertWidget(0, hotkeyModifierList);
 
     connect(ui->btnCancel,          SIGNAL(clicked()),
@@ -300,6 +294,8 @@ JsonSettingsDialog::JsonSettingsDialog(const QString& json_config_file_path, QWi
     } else {
         QMessageBox::warning(this, "JSON I/O Error", "An existing JSON file could not be found, pressing save will attempt to generate a new one with the provided values. File path: \"" + jsonConfigFilePath + "\"");
     }
+
+    setMaximumHeight(minimumHeight());
 }
 
 JsonSettingsDialog::~JsonSettingsDialog() {

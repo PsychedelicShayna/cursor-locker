@@ -39,6 +39,7 @@
 
 #include "process_scanner_dialog.hxx"
 #include "json_settings_dialog.hxx"
+#include "vkid_table_dialog.hxx"
 
 #include "winapi_utilities.hpp"
 #include "debug_console_widget.hpp"
@@ -89,19 +90,22 @@ private:
     bool              unregisterAmpHotkey();    // Unregisters the hotkey previously registered with ampHotkeyId.
 
     // QCheckBoxList*    ampwHotkeyModifierDropdown;    // Dropdown allowing for selection of multiple modifier keys (CTRL, ALT, SHIFT) in conjunction with the VKID.
-    QKbModifierList*  ampwHotkeyModifierDropdown;
-    QHotkeyInput*     ampwHotkeyRecorder;            // Instance of QHotkeyInput that records hotkeys entered into it, and updates the relevant UI components with the recorded hotkey information.
+    QKbModifierList*    ampwHotkeyModifierDropdown;
+    QHotkeyInput*       ampwHotkeyRecorder;            // Instance of QHotkeyInput that records hotkeys entered into it, and updates the relevant UI components with the recorded hotkey information.
 
-    quint32           ampHotkeyModifiersBitmask;    // Bitmask that stores the WinApi modifier key bitmask values that will be used to register the hotkey.
-    quint32           ampHotkeyVkid;                // The virtual key ID that identifies the target key that will be used to register the hotkey.
-    quint32           ampHotkeyId;                  // The ID used by WinApi to identify the registered hotkey, which can later be used to unregister it.
+    VkidTableDialog*    vkidTableDialog;
+    QPushButton*        btnSpawnVkidTableDialog;
 
-    // bool              setAmpHotkeyModifiersBitmaskFromDropdown(QCheckBoxList*);    // Uses a CheckBoxList's values to populate the ampHotkeyModifiersBitmask field.
-    QString           setAmpHotkeyVkid(const quint32&);                            // Changes the VKID that will be used for the hotkey to another value.
-    QString           setAmpHotkeyVkid(const QString&);                            // Overload that converts the QString into a quint32 before passing it to the primary overload.
+    quint32    ampHotkeyModifiersBitmask;    // Bitmask that stores the WinApi modifier key bitmask values that will be used to register the hotkey.
+    quint32    ampHotkeyVkid;                // The virtual key ID that identifies the target key that will be used to register the hotkey.
+    quint32    ampHotkeyId;                  // The ID used by WinApi to identify the registered hotkey, which can later be used to unregister it.
 
-    void              setAmToHotkey();      // Set the activation method to hotkey.
-    void              unsetAmToHotkey();    // Unset the hotkey activation method.
+    // bool                setAmpHotkeyModifiersBitmaskFromDropdown(QCheckBoxList*);    // Uses a CheckBoxList's values to populate the ampHotkeyModifiersBitmask field.
+    QString    setAmpHotkeyVkid(const quint32&);                            // Changes the VKID that will be used for the hotkey to another value.
+    QString    setAmpHotkeyVkid(const QString&);                            // Overload that converts the QString into a quint32 before passing it to the primary overload.
+
+    void    setAmToHotkey();      // Set the activation method to hotkey.
+    void    unsetAmToHotkey();    // Unset the hotkey activation method.
 
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      * Member variables, functions, and GUI widgets associated with
@@ -205,7 +209,10 @@ private slots:
 
     void spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE);
 
+    void spawnVkidTableDialog();
+
     void spawnSettingsDialog();
+
 
     void setMuteBeepBoopState(bool);
     void toggleMuteBeepBoop();

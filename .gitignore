@@ -9,3 +9,6 @@
 
 !*.pro
 *.user
+
+*.py
+*.txt
