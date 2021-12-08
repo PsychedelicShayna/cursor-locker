@@ -59,6 +59,8 @@ Q_OBJECT
 protected:
     Ui::MainWindow* ui;
 
+    // Debug Console
+    // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     QDebugConsole*  dbgConsole;               // The QDebugConsole instance shown at the bottom of the GUI, used for logging.
     QVBoxLayout*    vblDebugConsoleLayout;    // Layout that dbgConsole is contained in, set in the constructor.
 
@@ -67,23 +69,18 @@ protected:
     QMenu*      dbgCCMSubMenuLogLevels;
 
 
-
-    /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-     * Stores the currently selected activation method as an ENUM value. This can be reliably used
-     * all over the class to determine what the current activation method is, for method-specific
-     * functionality. It is set whenever the changeActivationMethod(int) SLOT is called, usually
-     * as a result of the activation method dropdown's value having been changed.
-     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    // Activation Method
+    // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     ACTIVATION_METHOD selectedActivationMethod;
 
-    /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-     * Helper functions to insert or remove any widget from the activation parameter layout defined
-     * in the UI file, which contains the activation parameter text field. Used to insert widgets
-     * like cbxHotkeyModifier, and btnSpawnProcessScanner depending on selected activation method.
-     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     void insertActivationParameterWidget(QWidget*, bool enable=true, bool unhide=true);
     void removeActivationParameterWidget(QWidget*, bool disable=true, bool hide=true);
 
+    Q_SLOT void changeActivationMethod(int method_index);    // Connected in constructor to cbx_activation_method's CurrentIndexChanged(int) signal.
+    Q_SLOT bool changeActivationMethod(const QString&);      // Overload that maps QString to activation method index and calls changeActivationMethod(int) overload.
+
+    Q_SLOT void editActivationMethodParameter();    // Connected in constructor to btn_edit_activation_parameter's clicked() signal.
+    Q_SLOT void clearActivationMethodParameter();
 
     // Keyboard Modifier Dropdown
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -140,6 +137,7 @@ protected:
 
     // Process Image Activation Method
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    bool           processHasBeenFound;
     QString        amParamProcessImageName;                   // The process image name that will be used for the process image name activation method.
     void           setAmpProcessImageName(const QString&);    // Changes the process image name activation method parameter to a new value.
 
@@ -151,6 +149,7 @@ protected:
 
     // Foreground Window Activation Method
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    bool           windowTitleHasBeenFound;
     QString        amParamForegroundWindowTitle;                   // The window title that will be used for the window title activation method.
     void           setAmpForegroundWindowTitle(const QString&);    // Changes the foreground window title activation method parameter to a new value.
 
@@ -207,24 +206,9 @@ signals:
     // the hotkey's ID (wParam) matches amParamHotkeyId.
     void targetHotkeyWasPressed();
 
-protected slots:
-    void changeActivationMethod(int method_index);     // Connected in constructor to cbx_activation_method's CurrentIndexChanged(int) signal.
-    bool changeActivationMethod(const QString&);     // Overload that maps QString to activation method index and calls changeActivationMethod(int) overload.
-
-    void editActivationMethodParameter();     // Connected in constructor to btn_edit_activation_parameter's clicked() signal.
-
-    /* Starts the foreground window grabber, which performs a maximum of 15 checks spaced 500ms apart, to see if the current foreground window,
-     * as returned by WinAPI, differs from the program's foreground window, indicating that another window was selected. If another window has
-     * been selected, then the timer performing these checks is reset, and the target foreground window is set to the selected foreground window.
-     * Equally, if the foreground window stays the same after 15 checks have been performed, the timer is also reset, and no changes are made.
-     * This function only works if the current activation method is set to Window title, otherwise any call made to it will be ignored.
-     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    // void foregroundWindowGrabberTimerTimeout();
-
-
 public:
     explicit MainWindow(QWidget* parent = nullptr);
-    ~MainWindow() override;
+    virtual ~MainWindow() override;
 };
 
 

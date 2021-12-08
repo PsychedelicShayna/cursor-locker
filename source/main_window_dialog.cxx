@@ -8,6 +8,9 @@ enum struct ACTIVATION_METHOD {
     WINDOW_TITLE    =   0b00000100,
 };
 
+
+// Activation Method
+// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void MainWindow::insertActivationParameterWidget(QWidget* widget, bool enable, bool unhide) {
     if(widget != nullptr) {
         if(widget->layout() != ui->hlActivationParameter) {
@@ -30,6 +33,138 @@ void MainWindow::removeActivationParameterWidget(QWidget* widget, bool disable, 
     }
 }
 
+void MainWindow::changeActivationMethod(int method_index) {
+    /* Clear linActivationParameter's text to allow the placeholder text of
+     * the selected activation method to be displayed later on.
+     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    ui->linActivationParameter->clear();
+    timedActivationMethodTimer->stop();
+
+    setCursorLockEnabled(false); // Ensure the cursor lock is disabled before switching over to a new activation method.
+
+    unsetAmToHotkey();
+    unsetAmToProcessImageName();
+    unsetAmToForegroundWindowTitle();
+
+    static const QList<quint32>& timed_activation_methods_indexes { 2, 3 };
+
+    switch(method_index) {
+    case 0 :
+        dbgConsole->log("Activation method set to nothing.");
+
+        selectedActivationMethod = ACTIVATION_METHOD::NOTHING;
+        ui->linActivationParameter->setPlaceholderText("No activation method selected");
+        break;
+
+    case 1 :
+        setAmToHotkey();
+        break;
+
+    case 2 :
+        setAmToProcessImageName();
+        break;
+
+    case 3 :
+        setAmToForegroundWindowTitle();
+        break;
+    }
+
+    if(timed_activation_methods_indexes.contains(method_index)) {
+        timedActivationMethodTimer->start(500);
+    }
+}
+
+bool MainWindow::changeActivationMethod(const QString& method) {
+    if(JsonSettingsDialog::ActivationMethodResolverSTOI.contains(method)) {
+        ui->cbxActivationMethod->setCurrentIndex(JsonSettingsDialog::ActivationMethodResolverSTOI[method]);
+        return true;
+    }
+
+    return false;
+}
+
+void MainWindow::editActivationMethodParameter() {
+    if(ui->btnEditActivationParameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
+        ui->btnEditActivationParameter->setText("Confirm");
+        ui->linActivationParameter->setEnabled(true);
+        ui->cbxActivationMethod->setEnabled(false);
+
+        btnSpawnProcessScanner->setEnabled(true);
+        btnStartWindowGrabber->setEnabled(true);
+
+        if(selectedActivationMethod == ACTIVATION_METHOD::HOTKEY) {
+            ampwHotkeyModifierDropdown->setEnabled(true);
+            ampwHotkeyRecorder->setEnabled(true);
+            ampwHotkeyRecorder->StartRecording();
+        }
+    } else if(ui->btnEditActivationParameter->text() == "Confirm") {
+        ui->btnEditActivationParameter->setText("Edit");
+        ui->linActivationParameter->setEnabled(false);
+        ui->cbxActivationMethod->setEnabled(true);
+
+        btnSpawnProcessScanner->setEnabled(false);
+        btnStartWindowGrabber->setEnabled(false);
+
+        ampwHotkeyModifierDropdown->setEnabled(false);
+        ampwHotkeyRecorder->setEnabled(false);
+        ampwHotkeyRecorder->StopRecording();
+
+        switch(selectedActivationMethod) {
+        case ACTIVATION_METHOD::HOTKEY : {
+            ampHotkeyModifiersBitmask = ampwHotkeyModifierDropdown->GetModifierCheckStateAsBitmask();
+            setAmpHotkeyVkid(ui->linActivationParameter->text());
+            ampwHotkeyRecorder->clear();
+            break;
+        }
+
+        case ACTIVATION_METHOD::PROCESS_IMAGE :
+            setAmpProcessImageName(ui->linActivationParameter->text());
+            break;
+
+        case ACTIVATION_METHOD::WINDOW_TITLE :
+            setAmpForegroundWindowTitle(ui->linActivationParameter->text());
+            break;
+
+        case ACTIVATION_METHOD::NOTHING :
+            break;
+        }
+    }
+}
+
+void MainWindow::clearActivationMethodParameter() {
+    ui->linActivationParameter->clear();
+
+    switch(selectedActivationMethod) {
+    case ACTIVATION_METHOD::NOTHING : {
+
+        break;
+    }
+
+    case ACTIVATION_METHOD::HOTKEY : {
+        ampwHotkeyModifierDropdown->SetModifierCheckStateFromBitmask(WINMOD_NULLMOD);
+        ampwHotkeyRecorder->clear();
+        setAmpHotkeyVkid(0x00);
+        break;
+    }
+
+    case ACTIVATION_METHOD::PROCESS_IMAGE : {
+        setAmpProcessImageName("");
+        break;
+    }
+
+    case ACTIVATION_METHOD::WINDOW_TITLE : {
+        setAmpForegroundWindowTitle("");
+        break;
+    }
+    }
+
+    if(lastCursorLockStateSet) {
+        setCursorLockEnabled(false);
+        seLockDeactivated.play();
+        dbgConsole->log("Cursor lock disabled, as activation method parameters have been cleared.");
+    }
+}
+
 
 
 // Keyboard Modifier Dropdown
@@ -46,7 +181,9 @@ void MainWindow::handleModifierListBitmaskChanged(const quint32& bitmask) {
 void MainWindow::updateUiWithRecordedWindowsHotkey(QHotkeyInput::WindowsHotkey windows_hotkey) {
     QDebugConsoleContext dbg_console_context { dbgConsole, "updateUiWithRecordedWindowsHotkey" };
 
-    ui->linActivationParameter->setText(QString::number(windows_hotkey.Vkid, 16));
+    const QString& hex_vkid { QString { "0x%1" }.arg(QString::number(windows_hotkey.Vkid, 16), 2, QChar { '0' }) };
+
+    ui->linActivationParameter->setText(hex_vkid);
     ampwHotkeyModifierDropdown->SetModifierCheckStateFromBitmask(windows_hotkey.Modifiers);
 
     dbgConsole->log({"Ui has been set to use recorded hotkey: ", windows_hotkey.ToString()});
@@ -55,7 +192,6 @@ void MainWindow::updateUiWithRecordedWindowsHotkey(QHotkeyInput::WindowsHotkey w
 void MainWindow::updateHotkeyInputWithNewModifierBitmask(const quint32& new_modifier_bitmask) {
     ampwHotkeyRecorder->clear();
 }
-
 
 
 
@@ -290,6 +426,7 @@ void MainWindow::unsetAmToProcessImageName() {
 void MainWindow::activateIfTargetProcessRunning() {
     if(!amParamProcessImageName.size()) {
         setCursorLockEnabled(false);
+        processHasBeenFound = false;
         return;
     }
 
@@ -304,31 +441,30 @@ void MainWindow::activateIfTargetProcessRunning() {
     process_entry_32.dwSize = sizeof(PROCESSENTRY32);
 
     if(Process32First(process_snapshot, &process_entry_32)) {
-        static bool first_find { true };
-        bool process_found { false };
+        bool process_included_in_scan { false };
 
         do {
             if(amParamProcessImageName == process_entry_32.szExeFile) {
-                process_found = true;
+                process_included_in_scan = true;
                 break;
             }
         } while(Process32Next(process_snapshot, &process_entry_32));
 
-        if(process_found) {
+        if(process_included_in_scan) {
             setCursorLockEnabled(true);
 
-            if(first_find) {
+            if(!processHasBeenFound) {
                 dbgConsole->log({"Enabling lock because target process was found: ", amParamProcessImageName});
-                first_find = false;
+                processHasBeenFound = true;
 
                 seLockActivated.play();
             }
         } else {
             setCursorLockEnabled(false);
 
-            if(!first_find) {
+            if(processHasBeenFound) {
                 dbgConsole->log({"Disabling lock because target process was lost: ", amParamProcessImageName});
-                first_find = true;
+                processHasBeenFound = false;
 
                 seLockDeactivated.play();
             }
@@ -384,10 +520,9 @@ void MainWindow::unsetAmToForegroundWindowTitle() {
 void MainWindow::activateIfForegroundWindowMatchesTarget() {
     if(!amParamForegroundWindowTitle.size()) {
         setCursorLockEnabled(false);
+        windowTitleHasBeenFound = false;
         return;
     }
-
-    static bool first_find { true };
 
     char window_title_buffer[256];
     std::fill(window_title_buffer, window_title_buffer + sizeof(window_title_buffer), 0x00);
@@ -398,19 +533,18 @@ void MainWindow::activateIfForegroundWindowMatchesTarget() {
     if(amParamForegroundWindowTitle == window_title_buffer) {
         setCursorLockEnabled(true);
 
-        if(first_find) {
+        if(!windowTitleHasBeenFound) {
             dbgConsole->log({"Enabling lock because target window was found: ", amParamForegroundWindowTitle});
-            first_find = false;
+            windowTitleHasBeenFound = true;
 
             seLockActivated.play();
-            // beepBoop({{500,20}, {700,20}});
         }
     } else {
         setCursorLockEnabled(false);
 
-        if(!first_find) {
+        if(windowTitleHasBeenFound) {
             dbgConsole->log({"Disabling lock because target window was lost: ", amParamForegroundWindowTitle});
-            first_find = true;
+            windowTitleHasBeenFound = false;
 
             seLockDeactivated.play();
         }
@@ -591,103 +725,6 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintpt
 }
 
 
-void MainWindow::changeActivationMethod(int method_index) {
-    /* Clear linActivationParameter's text to allow the placeholder text of
-     * the selected activation method to be displayed later on.
-     * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-    ui->linActivationParameter->clear();
-    timedActivationMethodTimer->stop();
-
-    setCursorLockEnabled(false); // Ensure the cursor lock is disabled before switching over to a new activation method.
-
-    unsetAmToHotkey();
-    unsetAmToProcessImageName();
-    unsetAmToForegroundWindowTitle();
-
-    static const QList<quint32>& timed_activation_methods_indexes { 2, 3 };
-
-    switch(method_index) {
-    case 0 :
-        dbgConsole->log("Activation method set to nothing.");
-
-        selectedActivationMethod = ACTIVATION_METHOD::NOTHING;
-        ui->linActivationParameter->setPlaceholderText("No activation method selected");
-        break;
-
-    case 1 :
-        setAmToHotkey();
-        break;
-
-    case 2 :
-        setAmToProcessImageName();
-        break;
-
-    case 3 :
-        setAmToForegroundWindowTitle();
-        break;
-    }
-
-    if(timed_activation_methods_indexes.contains(method_index)) {
-        timedActivationMethodTimer->start(500);
-    }
-}
-
-bool MainWindow::changeActivationMethod(const QString& method) {
-    if(JsonSettingsDialog::ActivationMethodResolverSTOI.contains(method)) {
-        ui->cbxActivationMethod->setCurrentIndex(JsonSettingsDialog::ActivationMethodResolverSTOI[method]);
-        return true;
-    }
-
-    return false;
-}
-
-void MainWindow::editActivationMethodParameter() {
-    if(ui->btnEditActivationParameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
-        ui->btnEditActivationParameter->setText("Confirm");
-        ui->linActivationParameter->setEnabled(true);
-        ui->cbxActivationMethod->setEnabled(false);
-
-        btnSpawnProcessScanner->setEnabled(true);
-        btnStartWindowGrabber->setEnabled(true);
-
-        if(selectedActivationMethod == ACTIVATION_METHOD::HOTKEY) {
-            ampwHotkeyModifierDropdown->setEnabled(true);
-            ampwHotkeyRecorder->setEnabled(true);
-            ampwHotkeyRecorder->StartRecording();
-        }
-    } else if(ui->btnEditActivationParameter->text() == "Confirm") {
-        ui->btnEditActivationParameter->setText("Edit");
-        ui->linActivationParameter->setEnabled(false);
-        ui->cbxActivationMethod->setEnabled(true);
-
-        btnSpawnProcessScanner->setEnabled(false);
-        btnStartWindowGrabber->setEnabled(false);
-
-        ampwHotkeyModifierDropdown->setEnabled(false);
-        ampwHotkeyRecorder->setEnabled(false);
-        ampwHotkeyRecorder->StopRecording();
-
-        switch(selectedActivationMethod) {
-        case ACTIVATION_METHOD::HOTKEY : {
-            ampHotkeyModifiersBitmask = ampwHotkeyModifierDropdown->GetModifierCheckStateAsBitmask();
-            setAmpHotkeyVkid(ui->linActivationParameter->text());
-            ampwHotkeyRecorder->clear();
-            break;
-        }
-
-        case ACTIVATION_METHOD::PROCESS_IMAGE :
-            setAmpProcessImageName(ui->linActivationParameter->text());
-            break;
-
-        case ACTIVATION_METHOD::WINDOW_TITLE :
-            setAmpForegroundWindowTitle(ui->linActivationParameter->text());
-            break;
-
-        case ACTIVATION_METHOD::NOTHING :
-            break;
-        }
-    }
-}
 
 MainWindow::MainWindow(QWidget* parent)
     :
@@ -721,10 +758,15 @@ MainWindow::MainWindow(QWidget* parent)
 
       timedActivationMethodTimer          { new QTimer          { this } },
 
+      // Process Image Name
+      processHasBeenFound                 { false                        },
       amParamProcessImageName             { QString { "" }               },
+
+      // Foreground Window Title
+      windowTitleHasBeenFound             { false                        },
       amParamForegroundWindowTitle        { QString { "" }               },
 
-      // Foreground window grabber
+      // Foreground Window Grabber
       windowGrabberTimerMaxTimeouts       { 15                           },
       windowGrabberTimerTimeoutCounter    { NULL                         },
       windowGrabberTimer                  { new QTimer          { this } },
@@ -797,6 +839,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     connect(ui->btnEditActivationParameter,    SIGNAL(clicked()),
             this,                              SLOT(editActivationMethodParameter()));
+
+    connect(ui->btnClearActivationParameter,   SIGNAL(clicked()),
+            this,                              SLOT(clearActivationMethodParameter()));
 
     connect(ui->btnMuteSoundEffects,           SIGNAL(clicked()),
             this,                              SLOT(toggleSoundEffectsMuted()));
