@@ -180,8 +180,8 @@ protected:
     // Sound Effects
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     QSoundEffect    seLockActivated, seLockDeactivated;      // Sound effects that play when the cursor lock is activated or deactivated.
-    QSoundEffect    seWindowGrabbed, seWindowGrabberTick;    // Sound effect that's played when a new foreground window is grabbed, or the window grabber times out.
-    bool            soundEffectsMuted;                               // Stores the mute toggle state of the above sound effects.
+    QSoundEffect    seWindowGrabberTick;                     // Sound effect that's played when a new foreground window is grabbed, or the window grabber times out.
+    bool            soundEffectsMuted;                       // Stores the mute toggle state of the above sound effects.
 
     Q_SLOT void     setSoundEffectsMutedState(bool);
     Q_SLOT void     toggleSoundEffectsMuted();

@@ -142,7 +142,7 @@ void MainWindow::clearActivationMethodParameter() {
 
     case ACTIVATION_METHOD::HOTKEY : {
         ampwHotkeyModifierDropdown->SetModifierCheckStateFromBitmask(WINMOD_NULLMOD);
-        ampwHotkeyRecorder->clear();
+        ampwHotkeyRecorder->ClearState();
         setAmpHotkeyVkid(0x00);
         break;
     }
@@ -572,8 +572,6 @@ void MainWindow::onWindowGrabberTimerTimeout() {
     if(++windowGrabberTimerTimeoutCounter > windowGrabberTimerMaxTimeouts) {
         stop_and_reset();
     } else {
-        // soundEffectWindowGrabberTick.play();
-
         ui->linActivationParameter->setText(
                     "Switch to target window within timeframe: "
                     + QString::number(windowGrabberTimerTimeoutCounter)
@@ -592,11 +590,17 @@ void MainWindow::onWindowGrabberTimerTimeout() {
             qint32 bytes_written { GetWindowText(foreground_window, window_title, sizeof(window_title)) };
             dbgConsole->log({"GetWindowText() wrote ", QString::number(bytes_written), " bytes to char window_title[256]"});
 
-            if(QString { window_title } != amParamForegroundWindowTitle) {
-                seWindowGrabbed.play();
-            }
+            if(selectedActivationMethod == ACTIVATION_METHOD::WINDOW_TITLE && ui->btnEditActivationParameter->text() == "Confirm") {
+                ui->btnEditActivationParameter->setText("Edit");
 
-            ui->linActivationParameter->setText(window_title);
+                ui->linActivationParameter->setEnabled(false);
+                ui->cbxActivationMethod->setEnabled(true);
+
+                btnSpawnProcessScanner->setEnabled(false);
+                btnStartWindowGrabber->setEnabled(false);
+
+                setAmpForegroundWindowTitle(window_title);
+            }
         } else {
             seWindowGrabberTick.play();
         }
@@ -649,7 +653,6 @@ void MainWindow::setSoundEffectsMutedState(bool state) {
 
     seLockActivated.setMuted(soundEffectsMuted);
     seLockDeactivated.setMuted(soundEffectsMuted);
-    seWindowGrabbed.setMuted(soundEffectsMuted);
     seWindowGrabberTick.setMuted(soundEffectsMuted);
 
     ui->btnMuteSoundEffects->setText(state ? "Unmute" : "Mute");
@@ -798,8 +801,6 @@ MainWindow::MainWindow(QWidget* parent)
 
     seLockActivated.setSource(QUrl::fromLocalFile(":/sounds/lock-activated.wav"));
     seLockDeactivated.setSource(QUrl::fromLocalFile(":/sounds/lock-deactivated.wav"));
-
-    seWindowGrabbed.setSource(QUrl::fromLocalFile(":/sounds/window-grabbed.wav"));
     seWindowGrabberTick.setSource(QUrl::fromLocalFile(":/sounds/window-grabber-tick.wav"));
 
     // Set ampwHotkeyModifierDropdown initial values.

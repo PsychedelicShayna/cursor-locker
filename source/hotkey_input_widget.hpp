@@ -46,8 +46,8 @@ public slots:
 
 public:
     void UpdateWindowsHotkey(const WindowsHotkey& windows_hotkey);
-
     bool IsRecording() const;
+    void ClearState();
 
     QHotkeyInput(QWidget* = nullptr);
 };

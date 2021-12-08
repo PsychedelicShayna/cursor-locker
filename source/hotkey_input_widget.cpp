@@ -106,12 +106,19 @@ void QHotkeyInput::StartRecording() {
 void QHotkeyInput::StopRecording() {
     if(isRecording) {
         isRecording = false;
-        windowsHotkey.Clear();
+        ClearState();
     }
 }
 
 bool QHotkeyInput::IsRecording() const {
     return isRecording;
+}
+
+void QHotkeyInput::ClearState() {
+    mainKeyEstablished = false;
+    lastWindowsHotkeyEmitted.Clear();
+    windowsHotkey.Clear();
+    clear();
 }
 
 QHotkeyInput::QHotkeyInput(QWidget* parent)
