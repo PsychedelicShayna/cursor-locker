@@ -1,4 +1,4 @@
-QT += core gui widgets
+QT += core gui widgets multimedia
 
 TARGET = cursor-locker
 TEMPLATE = app
@@ -40,3 +40,6 @@ FORMS +=                                \
 
 LIBS += \
     -lUser32
+
+RESOURCES += \
+    resources.qrc

@@ -1,13 +1,15 @@
 /*
 
 !source/
+!resources/
+!screenshots/
 
 !.gitignore
 !LICENSE
 !README.md
-!screenshots
 
 !*.pro
+!*.qrc
 *.user
 
 *.py
