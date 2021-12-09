@@ -1,87 +1,13 @@
-#include "check_box_list_widget.hpp"
+#include "keyboard_modifier_list_widget.hpp"
 
-bool QCheckBoxList::event(QEvent* event) {
-    if(event->type() == QEvent::Type::Wheel) {
-        event->accept();
-        return true;
-    }
+void ExtendedQListView::mouseReleaseEvent(QMouseEvent* mouse_event) {
+    const QPoint& release_pos { mouse_event->pos() };
+    const QModelIndex& item_index { indexAt(release_pos) };
 
-    return QComboBox::event(event);
-}
-
-void QCheckBoxList::SetHeaderLabel(const QString& header) {
-    HeaderItem->setText(header);
-}
-
-
-void QCheckBoxList::InsertCheckableItem(const qint32 &index, const QString &label, const Qt::CheckState &initial_checked_state) {
-    QStandardItem* new_item { new QStandardItem };
-    new_item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-    new_item->setData(initial_checked_state, Qt::CheckStateRole);
-    new_item->setText(label);
-
-    StandardItemModel->insertRow(index, new_item);
-}
-
-void QCheckBoxList::AddCheckableItem(const QString &label, const Qt::CheckState& initial_checked_state) {
-    InsertCheckableItem(count(), label, initial_checked_state);
-}
-
-void QCheckBoxList::AddCheckableItems(const QList<QPair<QString, Qt::CheckState>>& item_value_pairs) {
-    for(QPair<QString, Qt::CheckState> item_value_pair : item_value_pairs) {
-        AddCheckableItem(item_value_pair.first, item_value_pair.second);
+    if(item_index.isValid()) {
+        emit ModelItemClicked(item_index);
     }
 }
-
-void QCheckBoxList::AddCheckableItems(const QList<QString>& item_labels, const Qt::CheckState& initial_checked_state) {
-    for(const auto& item_label : item_labels) {
-        AddCheckableItem(item_label, initial_checked_state);
-    }
-}
-
-QStandardItem* QCheckBoxList::ItemAt(const quint32& index) {
-    return StandardItemModel->item(index);
-}
-
-QStandardItem* QCheckBoxList::ItemWithLabel(const QString& label) {
-    for(qint32 i { 0 }; i < count(); ++i) {
-        const auto& item { ItemAt(i) };
-
-        if(item->text() == label) {
-            return item;
-        }
-    }
-
-    return nullptr;
-}
-
-
-
-QList<QStandardItem*> QCheckBoxList::ItemsWithLabel(const QString& label) {
-    QList<QStandardItem*> matching_items;
-
-    for(qint32 i { 0 }; i < count(); ++i) {
-        const auto& item { ItemAt(i) };
-
-        if(item->text() == label) {
-            matching_items.emplace_back(item);
-        }
-    }
-
-    return matching_items;
-}
-
-QCheckBoxList::QCheckBoxList(QWidget* parent)
-    :
-      QComboBox            { parent                          },
-      StandardItemModel    { new QStandardItemModel { this } },
-      HeaderItem           { new QStandardItem               }
-{
-    setModel(StandardItemModel);
-}
-
-
-
 
 void QKbModifierList::handleItemDataChanged(QStandardItem* item) {
     const WINAPI_MODIFIER& item_modifier { QStringToWinApiKbModifier(item->text()) };
@@ -92,17 +18,25 @@ void QKbModifierList::handleItemDataChanged(QStandardItem* item) {
     }
 }
 
+void QKbModifierList::handleModelItemClicked(QModelIndex index) {
+    QStandardItem* item { standardItemModel->itemFromIndex(index) };
+    const Qt::CheckState& item_check_state { item->checkState() };
+
+    if(item_check_state == Qt::Checked) {
+        item->setCheckState(Qt::Unchecked);
+    } else if(item_check_state == Qt::Unchecked) {
+        item->setCheckState(Qt::Checked);
+    } else {
+        qDebug() << "QKbModifierList::handleItemClicked encountered an unknown Qt::CheckState value: " << item_check_state;
+    }
+}
+
 QStandardItem* QKbModifierList::ItemAt(const quint32& index) const {
     return standardItemModel->item(index);
 }
 
-bool QKbModifierList::event(QEvent* event) {
-    if(event->type() != QEvent::Wheel) {
-        return QComboBox::event(event);
-    } else {
-        event->accept();
-        return true;
-    }
+void QKbModifierList::wheelEvent(QWheelEvent* wheel_event) {
+    wheel_event->accept();
 }
 
 void QKbModifierList::InsertCheckableItem(const quint32& index, const QString& label, const Qt::CheckState& initial_state) {
@@ -180,11 +114,16 @@ QKbModifierList::QKbModifierList(const quint32& enabled_modifiers_bitmask) {
 
 QKbModifierList::QKbModifierList(QWidget* parent)
     :
-      QComboBox { parent },
-      standardItemModel { new QStandardItemModel }
+      QComboBox            { parent                 },
+      extendedQListView    { new ExtendedQListView  },
+      standardItemModel    { new QStandardItemModel }
 {
+    setView(extendedQListView);
+    setModel(standardItemModel);
+
     connect(standardItemModel,    SIGNAL(itemChanged(QStandardItem*)),
             this,                 SLOT(handleItemDataChanged(QStandardItem*)));
 
-    setModel(standardItemModel);
+    connect(extendedQListView,    SIGNAL(ModelItemClicked(QModelIndex)),
+            this,                 SLOT(handleModelItemClicked(QModelIndex)));
 }

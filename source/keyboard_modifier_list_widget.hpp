@@ -1,6 +1,8 @@
 #ifndef CHECKBOX_LIST_WIDGET_HXX
 #define CHECKBOX_LIST_WIDGET_HXX
 
+#include <QtWidgets/QAbstractItemView>
+#include <QtWidgets/QListView>
 #include <QtWidgets/QComboBox>
 
 #include <QtGui/QStandardItemModel>
@@ -9,34 +11,15 @@
 
 #include "winapi_utilities.hpp"
 
-class QCheckBoxList : public QComboBox {
+class ExtendedQListView : public QListView {
 Q_OBJECT
+
 signals:
-    void hello();
+    void ModelItemClicked(QModelIndex);
 
 protected:
-    virtual bool event(QEvent*) override;
-
-public:
-    QStandardItemModel* StandardItemModel;
-    QStandardItem* HeaderItem;
-
-    void SetHeaderLabel(const QString& header);
-
-    void InsertCheckableItem(const qint32& index, const QString& label, const Qt::CheckState& initial_checked_state = Qt::Checked);
-    void AddCheckableItem(const QString& label, const Qt::CheckState& initial_checked_state = Qt::Checked);
-
-    void AddCheckableItems(const QList<QPair<QString, Qt::CheckState>>& item_value_pairs);
-    void AddCheckableItems(const QList<QString>& item_labels, const Qt::CheckState& initial_checked_state = Qt::Checked);
-
-    QStandardItem* ItemAt(const quint32& index);
-    QStandardItem* ItemWithLabel(const QString& label);
-    QList<QStandardItem*> ItemsWithLabel(const QString& label);
-
-    QCheckBoxList(QWidget* parent);
-    QCheckBoxList(QWidget* parent, const QString& header);
+    virtual void mouseReleaseEvent(QMouseEvent* mouse_event) override;
 };
-
 
 class QKbModifierList : public QComboBox {
 Q_OBJECT
@@ -47,10 +30,13 @@ signals:
 
 protected slots:
     void handleItemDataChanged(QStandardItem* item);
+    void handleModelItemClicked(QModelIndex index);
 
 protected:
+    ExtendedQListView* extendedQListView;
     QStandardItemModel* standardItemModel;
-    virtual bool event(QEvent* event) override;
+
+    virtual void wheelEvent(QWheelEvent* wheel_event) override;
 
 public:
     QStandardItem* ItemAt(const quint32& index) const;

@@ -17,7 +17,7 @@
 
 #include <tuple>
 
-#include "check_box_list_widget.hpp"
+#include "keyboard_modifier_list_widget.hpp"
 
 #include "winapi_utilities.hpp"
 

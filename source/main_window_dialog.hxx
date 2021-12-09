@@ -46,7 +46,7 @@
 #include "winapi_utilities.hpp"
 #include "debug_console_widget.hpp"
 #include "hotkey_input_widget.hpp"
-#include "check_box_list_widget.hpp"
+#include "keyboard_modifier_list_widget.hpp"
 
 namespace Ui {
     class MainWindow;
