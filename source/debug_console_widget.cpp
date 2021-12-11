@@ -70,7 +70,6 @@ void QDebugConsole::HandleContextMenuActionTriggered(QAction* action) {
                 iter_action->setChecked(false);
             }
 
-            action->setCheckable(true);
             action->setChecked(true);
         }
     }
@@ -99,6 +98,11 @@ QDebugConsole::QDebugConsole(QWidget* parent)
     cmSubmenuLogLevels->addAction(">= WARNING")->setData(LL_WARNING);
     cmSubmenuLogLevels->addAction(">= ERROR")->setData(LL_ERROR);
     cmSubmenuLogLevels->addAction(">= EXCEPTION")->setData(LL_EXCEPTION);
+
+    for(const auto& action : cmSubmenuLogLevels->actions()) {
+        action->setCheckable(true);
+        action->setChecked(false);
+    }
 
     setContextMenuPolicy(Qt::CustomContextMenu);
 
