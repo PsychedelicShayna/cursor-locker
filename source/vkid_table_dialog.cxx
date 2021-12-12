@@ -235,6 +235,10 @@ VkidTableDialog::VkidTableDialog(QWidget* parent)
 
     connect(ui->leditSearchFilter,    SIGNAL(textEdited(const QString&)),
             this,                     SLOT(applySearchFilter()));
+
+    // QSS Stylesheet
+    // ----------------------------------------------------------------------------------------------------
+    connect(ui->leditSearchFilter, &QLineEdit::textChanged, [&]() -> void { style()->polish(ui->leditSearchFilter); });
 }
 
 VkidTableDialog::~VkidTableDialog() {
