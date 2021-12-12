@@ -87,7 +87,8 @@ QDebugConsole::QDebugConsole(QWidget* parent)
       // Console context menu initialization.
       contextMenu             { new QMenu { this } },
       cmActionClearConsole    { nullptr            },
-      cmSubmenuLogLevels      { nullptr            }
+      cmSubmenuLogLevels      { nullptr            },
+      ConsoleContext          { ""                 }
 {
     setReadOnly(true);
 
@@ -125,9 +126,10 @@ QDebugConsoleContext::QDebugConsoleContext(QDebugConsole* console, const QString
       ConsoleContext { consoleContext  },
       Console        { console         }
 {
+    previousContext = Console->ConsoleContext;
     Console->ConsoleContext = console_context;
 }
 
 QDebugConsoleContext::~QDebugConsoleContext() {
-    Console->ConsoleContext.clear();
+    Console->ConsoleContext = previousContext;
 }

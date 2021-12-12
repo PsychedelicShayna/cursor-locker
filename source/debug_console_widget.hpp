@@ -50,6 +50,7 @@ public:
 class QDebugConsoleContext : public QObject {
 protected:
     QString consoleContext;
+    QString previousContext;
 
 public:
     const QString& ConsoleContext;
