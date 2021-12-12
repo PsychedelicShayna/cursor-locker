@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>417</width>
-    <height>371</height>
+    <height>381</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -58,7 +58,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="linForegroundWindowTitle">
+       <widget class="QLineEdit" name="leditForegroundWindowTitle">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -90,7 +90,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="linProcessImageName">
+       <widget class="QLineEdit" name="leditProcessImageName">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -124,7 +124,7 @@
       <item>
        <layout class="QHBoxLayout" name="hlayoutKeyboardShortcut">
         <item>
-         <widget class="QLineEdit" name="linKeyboardShortcut">
+         <widget class="QLineEdit" name="leditKeyboardShortcut">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -191,6 +191,26 @@
           <string>Foreground Window Title</string>
          </property>
         </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelStylesheetPath">
+        <property name="text">
+         <string>Stylesheet Path</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="leditStylesheetPath">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="placeholderText">
+         <string>Stylesheet Path</string>
+        </property>
        </widget>
       </item>
       <item>

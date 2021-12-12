@@ -1,7 +1,6 @@
 #include "json_settings_dialog.hxx"
 #include "ui_json_settings_dialog.h"
 
-
 const QMap<qint32, QString> JsonSettingsDialog::ActivationMethodResolverITOS = {
     { 0, ""       },
     { 1, "hotkey" },
@@ -16,22 +15,12 @@ const QMap<QString, qint32> JsonSettingsDialog::ActivationMethodResolverSTOI = {
     { "title" , 3 }
 };
 
-JsonSettingsDialog::JsonSettings::JsonSettings()
-    :
-      HotkeyModifierBitmask    { NULL  },
-      InitialMuteState         { false }
-{
-
-}
-
-JsonSettingsDialog::JsonSettings JsonSettingsDialog::LoadSettingsFromJsonFile(QWidget* parent, const QString& json_file_path) {
-    JsonSettings loaded_json_settings;
-
-    QFile json_file { json_file_path };
+qsizetype JsonSettingsDialog::JsonSettings::LoadFromFile(const QString& path, QWidget* calling_widget) {
+    QFile json_file { path };
 
     if(!json_file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::critical(parent, "JSON I/O Error!", "Failed to load values from JSON file! Are you sure the program has permission to read from its location? File path: \"" + json_file_path + "\"");
-        return loaded_json_settings;
+        if(calling_widget != nullptr) QMessageBox::critical(calling_widget, "JSON I/O Error!", "Failed to load values from JSON file! Are you sure the program has permission to read from its location? File path: \"" + path + "\"");
+        return -1;
     }
 
     const QByteArray&       json_file_bytes    { json_file.readAll()                      };
@@ -86,13 +75,13 @@ JsonSettingsDialog::JsonSettings JsonSettingsDialog::LoadSettingsFromJsonFile(QW
 
                     // The call to mfptr_type_checker returned false, so object_value is of a type incompatible with lambda_value_handler.
                     else {
-                        QMessageBox::warning(parent, json_typeerror_title, json_typeerror_message.arg(object_key, expected_type_name));
+                        if(calling_widget != nullptr) QMessageBox::warning(calling_widget, json_typeerror_title, json_typeerror_message.arg(object_key, expected_type_name));
                     }
                 }
 
                 // No matching handler was found, the object_key is unknown.
                 else {
-                    QMessageBox::warning(parent, json_unknownkey_title, json_unknownkey_message.arg(object_key));
+                    if(calling_widget != nullptr) QMessageBox::warning(calling_widget, json_unknownkey_title, json_unknownkey_message.arg(object_key));
                 }
             }
 
@@ -100,7 +89,7 @@ JsonSettingsDialog::JsonSettings JsonSettingsDialog::LoadSettingsFromJsonFile(QW
             for(const JsonKeyHandlerTuple_t& key_handler : json_key_handlers) {
                 // Show a warning if a key wasn't handled and is therefore missing from the JSON file.
                 if(!used_key_handlers.contains(&key_handler)) {
-                    QMessageBox::warning(parent, json_keyerror_title, json_keyerror_message.arg(std::get<0>(key_handler)));
+                    if(calling_widget != nullptr) QMessageBox::warning(calling_widget, json_keyerror_title, json_keyerror_message.arg(std::get<0>(key_handler)));
                 }
             }
         }
@@ -108,11 +97,11 @@ JsonSettingsDialog::JsonSettings JsonSettingsDialog::LoadSettingsFromJsonFile(QW
 
     const QList<JsonKeyHandlerTuple_t>& json_key_handler_tuples {
         {"image", "string", &QJsonValue::isString, [&](const QJsonValue& value) -> void {
-                loaded_json_settings.ProcessImageName = value.toString();
+                ProcessImageName = value.toString();
             }},
 
         {"title", "string", &QJsonValue::isString, [&](const QJsonValue& value) -> void {
-                loaded_json_settings.ForegroundWindowTitle = value.toString();
+                ForegroundWindowTitle = value.toString();
             }},
 
         {"method", "string", &QJsonValue::isString, [&](const QJsonValue& value) -> void {
@@ -120,14 +109,18 @@ JsonSettingsDialog::JsonSettings JsonSettingsDialog::LoadSettingsFromJsonFile(QW
                 const QString& value_string { value.toString() };
 
                 if(valid_values.contains(value_string)) {
-                    loaded_json_settings.ActivationMethod = value_string;
+                    ActivationMethod = value_string;
                 } else {
-                    QMessageBox::warning(parent, json_valueerror_title, json_valueerror_message.arg("method", value_string, "value must be one of: \"title\", \"image\", \"hotkey\". "));
+                    if(calling_widget != nullptr) QMessageBox::warning(calling_widget, json_valueerror_title, json_valueerror_message.arg("method", value_string, "value must be one of: \"title\", \"image\", \"hotkey\". "));
                 }
             }},
 
+        {"stylesheet_path", "string", &QJsonValue::isString, [&](const QJsonValue& value) -> void {
+                StylesheetPath = value.toString();
+            }},
+
         {"mute", "boolean", &QJsonValue::isBool, [&](const QJsonValue& value) -> void {
-                loaded_json_settings.InitialMuteState = value.toBool();
+                InitialMuteState = value.toBool();
             }},
 
         {"shortcut", "object", &QJsonValue::isObject, [&](const QJsonValue& value) -> void {
@@ -140,27 +133,27 @@ JsonSettingsDialog::JsonSettings JsonSettingsDialog::LoadSettingsFromJsonFile(QW
                                 const quint32& vkid { vkid_string.toUInt(&success, 16) };
 
                                 if(success) {
-                                    loaded_json_settings.HotkeyVkid = QString { "0x%1" }.arg(vkid, 2, 16, QChar { '0' });
+                                    HotkeyVkid = QString { "0x%1" }.arg(vkid, 2, 16, QChar { '0' });
                                 } else {
-                                    QMessageBox::warning(parent, json_valueerror_title, json_valueerror_message.arg("shortcut/vkid", vkid_string, "cannot interpret value as a hexadecimal string, are you sure it's valid hexadecimal?"));
+                                    if(calling_widget != nullptr) QMessageBox::warning(calling_widget, json_valueerror_title, json_valueerror_message.arg("shortcut/vkid", vkid_string, "cannot interpret value as a hexadecimal string, are you sure it's valid hexadecimal?"));
                                 }
                             }
                         }},
 
                     {"modifier_alt", "boolean", &QJsonValue::isBool, [&](const QJsonValue& value) -> void {
-                            loaded_json_settings.HotkeyModifierBitmask |= (WINMOD_ALT * value.toBool());
+                            HotkeyModifierBitmask |= (WINMOD_ALT * value.toBool());
                         }},
 
                     {"modifier_control", "boolean", &QJsonValue::isBool, [&](const QJsonValue& value) -> void {
-                            loaded_json_settings.HotkeyModifierBitmask |= (WINMOD_CONTROL * value.toBool());
+                            HotkeyModifierBitmask |= (WINMOD_CONTROL * value.toBool());
                         }},
 
                     {"modifier_shift", "boolean", &QJsonValue::isBool, [&](const QJsonValue& value) -> void {
-                            loaded_json_settings.HotkeyModifierBitmask |= (WINMOD_SHIFT * value.toBool());
+                            HotkeyModifierBitmask |= (WINMOD_SHIFT * value.toBool());
                         }},
 
                     {"modifier_win", "boolean", &QJsonValue::isBool, [&](const QJsonValue& value) -> void {
-                            loaded_json_settings.HotkeyModifierBitmask |= (WINMOD_WIN * value.toBool());
+                            HotkeyModifierBitmask |= (WINMOD_WIN * value.toBool());
                         }},
                 };
 
@@ -170,71 +163,33 @@ JsonSettingsDialog::JsonSettings JsonSettingsDialog::LoadSettingsFromJsonFile(QW
 
     apply_handlers_to_object(json_key_handler_tuples, json_object);
 
-    return loaded_json_settings;
+    return json_file_bytes.size();
 }
 
-void JsonSettingsDialog::loadSettingsFromJsonFile() {
-    const JsonSettings& loaded_settings { JsonSettingsDialog::LoadSettingsFromJsonFile(this, jsonConfigFilePath) };
-
-    ui->linForegroundWindowTitle->setText(loaded_settings.ForegroundWindowTitle);
-    ui->linProcessImageName->setText(loaded_settings.ProcessImageName);
-    ui->linKeyboardShortcut->setText(loaded_settings.HotkeyVkid);
-    ui->cbMuted->setChecked(loaded_settings.InitialMuteState);
-
-    hotkeyModifierList->SetModifierCheckStateFromBitmask(loaded_settings.HotkeyModifierBitmask);
-
-    if(ActivationMethodResolverSTOI.contains(loaded_settings.ActivationMethod)) {
-        ui->cbxActivationMethod->setCurrentIndex(ActivationMethodResolverSTOI[loaded_settings.ActivationMethod]);
-    }
-}
-
-void JsonSettingsDialog::saveSettingsToJsonFile() {
-    QFile json_file { jsonConfigFilePath };
+qsizetype JsonSettingsDialog::JsonSettings::SaveToFile(const QString& path, QWidget* calling_widget) const {
+    QFile json_file { path };
 
     if(!json_file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::critical(this, "JSON I/O Error!", "Failed to open JSON file for writing! Are you sure the program has permission to write to its location? File path: \"" + jsonConfigFilePath + "\"");
-        return;
+        if(calling_widget != nullptr) QMessageBox::critical(calling_widget, "JSON I/O Error!", "Failed to open JSON file for writing! Are you sure the program has permission to write to its location? File path: \"" + path + "\"");
+        return -1;
     }
 
     QJsonObject json_object;
 
-    json_object["image"] = ui->linProcessImageName->text();
-    json_object["title"] = ui->linForegroundWindowTitle->text();
-    json_object["mute"]  = ui->cbMuted->isChecked();
+    json_object["image"]  = ProcessImageName;
+    json_object["title"]  = ForegroundWindowTitle;
+    json_object["mute"]   = InitialMuteState;
+    json_object["method"] = ActivationMethod;
 
-    const qint32& activation_method_index { ui->cbxActivationMethod->currentIndex() };
-
-    if(ActivationMethodResolverITOS.contains(activation_method_index)) {
-        json_object["method"] = ActivationMethodResolverITOS[activation_method_index];
-    } else {
-        QMessageBox::critical(this, "Value Resolution Error!", "Activation method index could not be resolved to a string! This shouldn't be possible, please report this error to the developer!");
-        return;
-    }
+    json_object["stylesheet_path"] = StylesheetPath;
 
     QJsonObject shortcut_object;
 
-    const QString& vkid_string { ui->linKeyboardShortcut->text() };
-
-    if(vkid_string.size()) {
-        bool conversion_success { false };
-        vkid_string.toUInt(&conversion_success, 16);
-
-        if(conversion_success) {
-            shortcut_object["vkid"] = vkid_string;
-        } else {
-            QMessageBox::critical(this, "JSON Value Error!", "Cannot convert the VKID field from a hexadecimal string to an integer. Cannot continue saving. Are you sure it's valid hexadecimal?");
-            return;
-        }
-    } else {
-        shortcut_object["vkid"] = "";
-    }
-
-    quint32 modifier_bitmask { hotkeyModifierList->GetModifierCheckStateAsBitmask() };
-
-    shortcut_object["modifier_alt"]        = bool { static_cast<bool>(modifier_bitmask & WINMOD_ALT)     };
-    shortcut_object["modifier_control"]    = bool { static_cast<bool>(modifier_bitmask & WINMOD_CONTROL) };
-    shortcut_object["modifier_shift"]      = bool { static_cast<bool>(modifier_bitmask & WINMOD_SHIFT)   };
-    shortcut_object["modifier_win"]        = bool { static_cast<bool>(modifier_bitmask & WINMOD_WIN)     };
+    shortcut_object["vkid"]               = HotkeyVkid;
+    shortcut_object["modifier_alt"]       = static_cast<bool>(HotkeyModifierBitmask & WINMOD_ALT);
+    shortcut_object["modifier_control"]   = static_cast<bool>(HotkeyModifierBitmask & WINMOD_CONTROL);
+    shortcut_object["modifier_shift"]     = static_cast<bool>(HotkeyModifierBitmask & WINMOD_SHIFT);
+    shortcut_object["modifier_win"]       = static_cast<bool>(HotkeyModifierBitmask & WINMOD_WIN);
 
     json_object["shortcut"] = shortcut_object;
 
@@ -242,10 +197,82 @@ void JsonSettingsDialog::saveSettingsToJsonFile() {
     QByteArray       json_bytes       { json_document.toJson(QJsonDocument::JsonFormat::Indented) };
 
     qint64 bytes_written { json_file.write(json_bytes) };
+    json_file.close();
 
     if(bytes_written != json_bytes.size()) {
-        QMessageBox::critical(this, "JSON I/O Error!", "The amount of bytes written to the file doesn't correspond to the size of the JSON data. Are you sure the program has permission to write to its location? File path: \"" + jsonConfigFilePath + "\"");
+        if(calling_widget != nullptr) QMessageBox::critical(calling_widget, "JSON I/O Error!", "The amount of bytes written to the file doesn't correspond to the size of the JSON data. Are you sure the program has permission to write to its location? File path: \"" + path + "\"");
+        return -2;
+    }
+
+    return bytes_written;
+}
+
+JsonSettingsDialog::JsonSettings::JsonSettings()
+    :
+      HotkeyModifierBitmask    { NULL  },
+      InitialMuteState         { false }
+{
+
+}
+
+void JsonSettingsDialog::loadUiSettingsFromJsonFile() {
+    JsonSettings json_settings;
+
+    const qsizetype& bytes_read { json_settings.LoadFromFile(jsonConfigFilePath, this) };
+
+    if(bytes_read > 0) {
+        ui->leditForegroundWindowTitle->setText(json_settings.ForegroundWindowTitle);
+        ui->leditProcessImageName->setText(json_settings.ProcessImageName);
+        ui->leditKeyboardShortcut->setText(json_settings.HotkeyVkid);
+        ui->cbMuted->setChecked(json_settings.InitialMuteState);
+        ui->leditStylesheetPath->setText(json_settings.StylesheetPath);
+
+        hotkeyModifierList->SetModifierCheckStateFromBitmask(json_settings.HotkeyModifierBitmask);
+
+        if(ActivationMethodResolverSTOI.contains(json_settings.ActivationMethod)) {
+            ui->cbxActivationMethod->setCurrentIndex(ActivationMethodResolverSTOI[json_settings.ActivationMethod]);
+        }
+    }
+}
+
+void JsonSettingsDialog::saveUiSettingsToJsonFile() {
+    JsonSettings json_settings;
+    json_settings.ProcessImageName = ui->leditProcessImageName->text();
+    json_settings.ForegroundWindowTitle = ui->leditForegroundWindowTitle->text();
+    json_settings.InitialMuteState = ui->cbMuted->isChecked();
+
+    const qint32& activation_method_index { ui->cbxActivationMethod->currentIndex() };
+
+    if(ActivationMethodResolverITOS.contains(activation_method_index)) {
+        json_settings.ActivationMethod = ActivationMethodResolverITOS[activation_method_index];
     } else {
+        QMessageBox::critical(this, "Value Resolution Error!", "Activation method index could not be resolved to a string! This shouldn't be possible, please report this error to the developer!");
+        return;
+    }
+
+    json_settings.StylesheetPath = ui->leditStylesheetPath->text();
+
+    QJsonObject shortcut_object;
+
+    const QString& vkid_string { ui->leditKeyboardShortcut->text() };
+
+    if(vkid_string.size()) {
+        bool conversion_success { false };
+        vkid_string.toUInt(&conversion_success, 16);
+
+        if(conversion_success) {
+            json_settings.HotkeyVkid = vkid_string;
+        } else {
+            QMessageBox::critical(this, "JSON Value Error!", "Cannot convert the VKID field from a hexadecimal string to an integer. Cannot continue saving. Are you sure it's valid hexadecimal?");
+            return;
+        }
+    }
+
+    json_settings.HotkeyModifierBitmask = hotkeyModifierList->GetModifierCheckStateAsBitmask();
+
+    const qsizetype& bytes_written { json_settings.SaveToFile(jsonConfigFilePath, this) };
+
+    if(bytes_written > 0) {
         close();
     }
 }
@@ -284,13 +311,20 @@ JsonSettingsDialog::JsonSettingsDialog(const QString& json_config_file_path, QWi
             this,                   SLOT(close()));
 
     connect(ui->btnSaveDefaults,    SIGNAL(clicked()),
-            this,                   SLOT(saveSettingsToJsonFile()));
+            this,                   SLOT(saveUiSettingsToJsonFile()));
+
+    // QSS Stylesheet
+    // ----------------------------------------------------------------------------------------------------
+    connect(ui->leditForegroundWindowTitle,    &QLineEdit::textChanged, [&]() -> void { style()->polish(ui->leditForegroundWindowTitle); });
+    connect(ui->leditKeyboardShortcut,         &QLineEdit::textChanged, [&]() -> void { style()->polish(ui->leditKeyboardShortcut);      });
+    connect(ui->leditProcessImageName,         &QLineEdit::textChanged, [&]() -> void { style()->polish(ui->leditProcessImageName);      });
+    connect(ui->leditStylesheetPath,           &QLineEdit::textChanged, [&]() -> void { style()->polish(ui->leditStylesheetPath);        });
 
     QFileInfo file_info { json_config_file_path };
     jsonConfigFilePath = file_info.absoluteFilePath();
 
     if(file_info.exists() && file_info.isFile()) {
-        loadSettingsFromJsonFile();
+        loadUiSettingsFromJsonFile();
     } else {
         QMessageBox::warning(this, "JSON I/O Error", "An existing JSON file could not be found, pressing save will attempt to generate a new one with the provided values. File path: \"" + jsonConfigFilePath + "\"");
     }

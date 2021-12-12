@@ -34,16 +34,18 @@ public:
         QString ProcessImageName;
         QString HotkeyVkid;
         QString ActivationMethod;
+        QString StylesheetPath;
         quint32 HotkeyModifierBitmask;
         bool    InitialMuteState;
+
+        qsizetype LoadFromFile(const QString& path, QWidget* calling_widget = nullptr);
+        qsizetype SaveToFile(const QString& path, QWidget* calling_widget = nullptr) const;
 
         JsonSettings();
     };
 
     static const QMap<qint32, QString>    ActivationMethodResolverITOS;
     static const QMap<QString, qint32>    ActivationMethodResolverSTOI;
-
-    static JsonSettings LoadSettingsFromJsonFile(QWidget* message_box_parent, const QString& json_file_path);
 
 signals:
     void MuteStateChanged(const bool new_mute_state);
@@ -55,8 +57,8 @@ private:
     QKbModifierList* hotkeyModifierList;
 
 protected slots:
-    void loadSettingsFromJsonFile();
-    void saveSettingsToJsonFile();
+    void loadUiSettingsFromJsonFile();
+    void saveUiSettingsToJsonFile();
 
 public:
     explicit JsonSettingsDialog(const QString& json_config_file_path, QWidget* parent = nullptr);
