@@ -8,6 +8,68 @@ enum struct ACTIVATION_METHOD {
     WINDOW_TITLE    =   0b00000100,
 };
 
+qsizetype MainWindow::loadQssStylesheet(const QString& style_sheet_path, QByteArray& out_bytes) const {
+    QFileInfo style_sheet_info { style_sheet_path };
+
+    if(!style_sheet_info.exists() || !style_sheet_info.isFile()) {
+        return -1;
+    }
+
+    QFile style_sheet_file { style_sheet_info.absoluteFilePath() };
+
+    if(style_sheet_file.open(QFile::ReadOnly | QFile::Text)) {
+        const QByteArray& style_sheet_bytes { style_sheet_file.readAll() };
+        style_sheet_file.close();
+
+        out_bytes = style_sheet_bytes;
+
+        return style_sheet_bytes.size();
+    }
+
+
+    return -2;
+}
+
+qsizetype MainWindow::loadAndApplyQssStylesheet(const QString& style_sheet_path) {
+    QByteArray style_sheet_bytes;
+
+    const qsizetype& bytes_read {
+        loadQssStylesheet(style_sheet_path, style_sheet_bytes)
+    };
+
+    switch(bytes_read) {
+    case -1:
+        dbgConsole->log("Skipping stylesheet loading, as the stylesheet could not be found, using default Windows style instead.", QDebugConsole::LL_WARNING);
+        break;
+
+    case -2:
+        dbgConsole->log({"Encountered an I/O error when attempting to open stylesheet file for reading, location: \"", styleSheetFilePath, "\" - are you sure you have permission to read from this location?"}, QDebugConsole::LL_ERROR);
+        break;
+
+    default:
+        const QFileInfo style_sheet_info   { style_sheet_path };
+        const QFileInfo resource_file_info { QString { "%1/%2.rcc" }.arg(style_sheet_info.path(), style_sheet_info.completeBaseName()) };
+
+        if(resource_file_info.exists() && resource_file_info.isFile()) {
+            if(QResource::registerResource(resource_file_info.absoluteFilePath())) {
+                dbgConsole->log({"Registered resource file: ", resource_file_info.absoluteFilePath()});
+            } else {
+                dbgConsole->log({"Failed to register resource file: ", resource_file_info.absoluteFilePath()}, QDebugConsole::LL_WARNING);
+            }
+        } else {
+            dbgConsole->log({"Could not find a matching resource file for the stylesheet that was found. Path that was checked: ", resource_file_info.absoluteFilePath()});
+        }
+
+        setStyleSheet(style_sheet_bytes);
+        break;
+    }
+
+    return bytes_read;
+}
+
+qsizetype MainWindow::loadAndApplyQssStylesheet() {
+    return loadAndApplyQssStylesheet(styleSheetFilePath);
+}
 
 // Activation Method
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -645,6 +707,41 @@ void MainWindow::spawnJsonSettingsDialog() {
     }
 }
 
+void MainWindow::loadAndApplyJsonSettings() {
+    QFileInfo json_file_info { jsonConfigFilePath };
+    JsonSettingsDialog::JsonSettings json_settings;
+    json_settings.StylesheetPath = styleSheetFilePath;    // Default stylesheet location.
+
+    if(json_file_info.exists() && json_file_info.isFile()) {
+        const qsizetype& bytes_read { json_settings.LoadFromFile(jsonConfigFilePath, this) };
+
+        if(bytes_read > 0) {
+            setAmpForegroundWindowTitle(json_settings.ForegroundWindowTitle);
+            setAmpProcessImageName(json_settings.ProcessImageName);
+            setAmpHotkeyVkid(json_settings.HotkeyVkid);
+            setSoundEffectsMutedState(json_settings.InitialMuteState);
+            ampwHotkeyModifierDropdown->SetModifierCheckStateFromBitmask(json_settings.HotkeyModifierBitmask);
+            changeActivationMethod(json_settings.ActivationMethod);
+
+            dbgConsole->log({"Read ", QString::number(bytes_read), " bytes from JSON file: ", json_file_info.absoluteFilePath()});
+        } else {
+            dbgConsole->log({"JsonSettings::LoadFromFile returned a value <= 0: ", QString::number(bytes_read)}, QDebugConsole::LL_ERROR);
+        }
+    } else {
+        QMessageBox::information(this, "Generating New JSON File", "The required defaults.json file could not be found, generating a new one at this location: " + json_file_info.absoluteFilePath());
+        dbgConsole->log({"Generating a new JSON config file at this location, because an existing one could not be found: ", json_file_info.absoluteFilePath()});
+        const qsizetype& bytes_written { json_settings.SaveToFile(json_file_info.absoluteFilePath(), this) };
+
+        if(bytes_written > 0) {
+            dbgConsole->log({"Wrote ", QString::number(bytes_written), " bytes to JSON file: ", json_file_info.absoluteFilePath()});
+        } else {
+            dbgConsole->log({"JsonSettings::SaveToFile returned a value <= 0: ", QString::number(bytes_written)}, QDebugConsole::LL_ERROR);
+        }
+    }
+
+    loadAndApplyQssStylesheet(json_settings.StylesheetPath);
+}
+
 
 // Sound Effects
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -740,6 +837,8 @@ MainWindow::MainWindow(QWidget* parent)
       vblDebugConsoleLayout               { new QVBoxLayout              },
       dbgConsoleContextMenu               { new QMenu { dbgConsole }     },
 
+      styleSheetFilePath                  { "styles/indigo.qss"          },
+
       selectedActivationMethod            { ACTIVATION_METHOD::NOTHING   },
 
       // Hotkey activation method member variables initialization
@@ -782,6 +881,9 @@ MainWindow::MainWindow(QWidget* parent)
 
 {
     ui->setupUi(this);
+
+    QDebugConsoleContext context { dbgConsole, __FUNCTION__ };
+
 
     // Configure Main Window Flags & Set Initial Window Size
     // --------------------------------------------------
@@ -830,9 +932,6 @@ MainWindow::MainWindow(QWidget* parent)
     btnSpawnVkidTableDialog->setEnabled(false);
     btnSpawnVkidTableDialog->setHidden(true);
 
-
-
-
     // Qt SIGNAL/SLOT Connections
     // ----------------------------------------------------------------------------------------------------
     connect(ui->cbxActivationMethod,           SIGNAL(currentIndexChanged(int)),
@@ -865,46 +964,29 @@ MainWindow::MainWindow(QWidget* parent)
     connect(ui->btnSettings,                   SIGNAL(clicked()),
             this,                              SLOT(spawnJsonSettingsDialog()));
 
+    ui->btnSettings->installEventFilter(new AnonymousEventFilter<MainWindow*> {
+                                            [](QObject*, QEvent* event, MainWindow* parent) -> bool {
+                                                if(event->type() == QEvent::MouseButtonRelease) {
+                                                    QMouseEvent* mouse_event { reinterpret_cast<QMouseEvent*>(event) };
 
+                                                    if(mouse_event->button() == Qt::MouseButton::RightButton) {
+                                                        parent->loadAndApplyJsonSettings();
+                                                        event->accept();
+                                                        return true;
+                                                    }
+                                                }
 
+                                                return false;
+                                            }, this});
+
+    // QSS Stylesheet Polish Connections
+    // ----------------------------------------------------------------------------------------------------
+    connect(ui->linActivationParameter,        &QLineEdit::textChanged, [&]() -> void { style()->polish(ui->linActivationParameter); });
+    connect(ampwHotkeyRecorder,                &QLineEdit::textChanged, [&]() -> void { style()->polish(ampwHotkeyRecorder);         });
 
     // Load JSON Settings
     // ----------------------------------------------------------------------------------------------------
-    QFileInfo json_file_info { jsonConfigFilePath };
-
-    if(json_file_info.exists() && json_file_info.isFile()) {
-        const JsonSettingsDialog::JsonSettings& json_settings { JsonSettingsDialog::LoadSettingsFromJsonFile(this, jsonConfigFilePath) };
-
-        setAmpForegroundWindowTitle(json_settings.ForegroundWindowTitle);
-        setAmpProcessImageName(json_settings.ProcessImageName);
-        setAmpHotkeyVkid(json_settings.HotkeyVkid);
-        setSoundEffectsMutedState(json_settings.InitialMuteState);
-
-        ampwHotkeyModifierDropdown->SetModifierCheckStateFromBitmask(json_settings.HotkeyModifierBitmask);
-
-        changeActivationMethod(json_settings.ActivationMethod);
-    }
-
-
-
-    // Load Style Sheet
-    // ----------------------------------------------------------------------------------------------------
-    QFileInfo style_sheet_file_info { styleSheetFilePath };
-
-    if(style_sheet_file_info.exists() && style_sheet_file_info.isFile()) {
-        QFile style_sheet_file { style_sheet_file_info.absoluteFilePath() };
-
-        if(style_sheet_file.open(QFile::ReadOnly | QFile::OpenModeFlag::Text)) {
-            QByteArray style_sheet_bytes { style_sheet_file.readAll() };
-            style_sheet_file.close();
-
-            setStyleSheet(style_sheet_bytes);
-        } else {
-            dbgConsole->log({"Encountered an I/O error when attempting to open stylesheet file for reading, location: \"", style_sheet_file_info.absoluteFilePath(), "\" - are you sure you have permission to read from this location?"}, QDebugConsole::LL_ERROR);
-        }
-    } else {
-        dbgConsole->log("Skipping stylesheet loading, as the stylesheet could not be found, using default Windows style instead.", QDebugConsole::LL_WARNING);
-    }
+    loadAndApplyJsonSettings();    // Also responsible for loading and applying stylesheet, based on the JSON file values.
 }
 
 MainWindow::~MainWindow() {

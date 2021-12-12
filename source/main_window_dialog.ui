@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>614</width>
-    <height>230</height>
+    <width>628</width>
+    <height>276</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -26,15 +26,27 @@
    </size>
   </property>
   <widget class="QWidget" name="gdMain">
-   <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,1">
-    <item row="0" column="0">
+   <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1">
+    <item>
      <widget class="QGroupBox" name="vlActivation">
       <property name="title">
        <string>Activation Method</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <property name="sizeConstraint">
+        <enum>QLayout::SetMinimumSize</enum>
+       </property>
        <item>
         <layout class="QHBoxLayout" name="hlActivationMethod" stretch="5,0,0">
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QComboBox" name="cbxActivationMethod">
            <property name="minimumSize">
@@ -95,6 +107,12 @@
        </item>
        <item>
         <layout class="QHBoxLayout" name="hlActivationParameter" stretch="0,0,0">
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QLineEdit" name="linActivationParameter">
            <property name="enabled">
@@ -136,7 +154,7 @@
       </layout>
      </widget>
     </item>
-    <item row="1" column="0">
+    <item>
      <widget class="QGroupBox" name="grpDebugConsole">
       <property name="title">
        <string>Debug Console</string>

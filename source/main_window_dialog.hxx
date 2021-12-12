@@ -15,6 +15,8 @@
 #include <QFileInfo>
 #include <QFile>
 
+#include <QResource>
+
 #include <QStandardItemModel>
 #include <QStandardItem>
 
@@ -48,6 +50,8 @@
 #include "hotkey_input_widget.hpp"
 #include "keyboard_modifier_list_widget.hpp"
 
+#include "anonymous_event_filter.hpp"
+
 namespace Ui {
     class MainWindow;
 }
@@ -68,6 +72,11 @@ protected:
     QAction*    dbgCCMActionClear;
     QMenu*      dbgCCMSubMenuLogLevels;
 
+    const QString styleSheetFilePath;
+
+    Q_SLOT qsizetype loadQssStylesheet(const QString&, QByteArray& out_bytes) const;
+    Q_SLOT qsizetype loadAndApplyQssStylesheet(const QString&);
+    Q_SLOT qsizetype loadAndApplyQssStylesheet();
 
     // Activation Method
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -175,6 +184,7 @@ protected:
     QString                jsonConfigFilePath;
     JsonSettingsDialog*    jsonSettingsDialog;
     Q_SLOT void            spawnJsonSettingsDialog();
+    Q_SLOT void            loadAndApplyJsonSettings();
 
 
     // Sound Effects
@@ -199,7 +209,6 @@ protected:
     bool nativeEvent(const QByteArray& event_type, void* message, qintptr* result) override;
     // ----------------------------------------------------------------------------------------------------
 
-    const QString styleSheetFilePath;
 
 signals:
     // Signal emitted by nativeEvent when it receives a registered hotkey pressed native event, and
