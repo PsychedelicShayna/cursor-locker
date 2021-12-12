@@ -3,6 +3,7 @@
 !source/
 !resources/
 !screenshots/
+!indigo-style
 
 !.gitignore
 !LICENSE

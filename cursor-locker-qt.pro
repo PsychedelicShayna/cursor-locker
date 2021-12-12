@@ -22,6 +22,7 @@ SOURCES +=                              \
     source/winapi_utilities.cpp
 
 HEADERS +=                              \
+    source/anonymous_event_filter.hpp \
     source/keyboard_modifier_list_widget.hpp \
     source/main_window_dialog.hxx       \
     source/process_scanner_dialog.hxx   \
