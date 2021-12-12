@@ -418,6 +418,10 @@ ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& sca
         autoScannerInterval = interval;
     });
 
+    // QSS Stylesheet
+    // --------------------------------------------------------------------------------------------------------------
+    connect(ui->linSearchFilter, &QLineEdit::textChanged, [&]() -> void { style()->polish(ui->linSearchFilter); });
+
     processScanner.moveToThread(&processScannerThread);     // Move the ProcessScanner instance to the QThread.
     processScannerThread.start();                           // Start the QThread attached to the instance.
 }

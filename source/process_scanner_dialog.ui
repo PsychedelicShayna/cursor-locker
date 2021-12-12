@@ -100,7 +100,7 @@
         </widget>
        </item>
        <item>
-        <widget class="Line" name="line_2">
+        <widget class="Line" name="lineScanner">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
@@ -197,7 +197,7 @@
         </widget>
        </item>
        <item>
-        <widget class="Line" name="line">
+        <widget class="Line" name="lineScanFilters">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
