@@ -143,13 +143,13 @@ void ProcessScanner::PerformScan(ProcessScanner::SCAN_SCOPE scope, ProcessScanne
                             continue;
                         }
 
-                        char window_title_buffer[512];
+                        wchar_t window_title_buffer[512];
                         ZeroMemory(window_title_buffer, sizeof(window_title_buffer));
 
-                        int32_t bytes_written { GetWindowTextA(process_window, window_title_buffer, sizeof(window_title_buffer)) };
+                        int32_t bytes_written { GetWindowText(process_window, window_title_buffer, sizeof(window_title_buffer)) };
 
                         if(bytes_written) {
-                            QString window_title { window_title_buffer };
+                            QString window_title { QString::fromWCharArray(window_title_buffer) };
 
                             if(filters & FILTER_DUPLICATE_WINDOWS) {
                                 if(existing_window_titles.contains(window_title)) {

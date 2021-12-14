@@ -195,6 +195,8 @@ void ProcessScannerDialog::applyWhitelistToTree() {
 }
 
 void ProcessScannerDialog::onProcessScannerScanStarted() {
+    ui->twProcessTree->setSortingEnabled(false);
+
     ui->btnScan->setText("Scanning...");
     ui->btnScan->setEnabled(false);
     scannerCurrentlyScanning = true;
@@ -210,6 +212,9 @@ void ProcessScannerDialog::onProcessScannerScanFinished() {
     ui->btnScan->setText("Scan Processes");
     ui->btnScan->setEnabled(true);
     scannerCurrentlyScanning = false;
+
+    ui->twProcessTree->setSortingEnabled(true);
+    ui->twProcessTree->sortByColumn(0, Qt::SortOrder::AscendingOrder);
 }
 
 void ProcessScannerDialog::emitFilteredProcessScannerScanRequest() {

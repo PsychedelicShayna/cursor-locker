@@ -506,7 +506,7 @@ void MainWindow::activateIfTargetProcessRunning() {
         bool process_included_in_scan { false };
 
         do {
-            if(amParamProcessImageName == process_entry_32.szExeFile) {
+            if(amParamProcessImageName == QString::fromWCharArray(process_entry_32.szExeFile)) {
                 process_included_in_scan = true;
                 break;
             }
@@ -647,7 +647,7 @@ void MainWindow::onWindowGrabberTimerTimeout() {
         if(foreground_window != HWND(winId())) {
             stop_and_reset();
 
-            char window_title[256];
+            wchar_t window_title[256];
             ZeroMemory(window_title, sizeof(window_title));
             qint32 bytes_written { GetWindowText(foreground_window, window_title, sizeof(window_title)) };
             dbgConsole->log({"GetWindowText() wrote ", QString::number(bytes_written), " bytes to char window_title[256]"});
@@ -661,7 +661,7 @@ void MainWindow::onWindowGrabberTimerTimeout() {
                 btnSpawnProcessScanner->setEnabled(false);
                 btnStartWindowGrabber->setEnabled(false);
 
-                setAmpForegroundWindowTitle(window_title);
+                setAmpForegroundWindowTitle(QString::fromWCharArray(window_title));
             }
         } else {
             seWindowGrabberTick.play();

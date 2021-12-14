@@ -1,7 +1,13 @@
 #ifndef MAIN_WINDOW_DLG_HXX
 #define MAIN_WINDOW_DLG_HXX
 
-#undef UNICODE
+#ifndef _UNICODE
+#define _UNICODE
+#endif
+
+#ifndef UNICODE
+#define UNICODE
+#endif
 
 #include <QMainWindow>
 #include <QPushButton>
