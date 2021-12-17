@@ -8,7 +8,7 @@ enum struct ACTIVATION_METHOD {
     WINDOW_TITLE    =   0b00000100,
 };
 
-qsizetype MainWindow::loadQssStylesheet(const QString& style_sheet_path, QByteArray& out_bytes) const {
+qsizetype MainWindowDialog::loadQssStylesheet(const QString& style_sheet_path, QByteArray& out_bytes) const {
     QFileInfo style_sheet_info { style_sheet_path };
 
     if(!style_sheet_info.exists() || !style_sheet_info.isFile()) {
@@ -30,7 +30,7 @@ qsizetype MainWindow::loadQssStylesheet(const QString& style_sheet_path, QByteAr
     return -2;
 }
 
-qsizetype MainWindow::loadAndApplyQssStylesheet(const QString& style_sheet_path) {
+qsizetype MainWindowDialog::loadAndApplyQssStylesheet(const QString& style_sheet_path) {
     QByteArray style_sheet_bytes;
 
     const qsizetype& bytes_read {
@@ -67,13 +67,13 @@ qsizetype MainWindow::loadAndApplyQssStylesheet(const QString& style_sheet_path)
     return bytes_read;
 }
 
-qsizetype MainWindow::loadAndApplyQssStylesheet() {
+qsizetype MainWindowDialog::loadAndApplyQssStylesheet() {
     return loadAndApplyQssStylesheet(styleSheetFilePath);
 }
 
 // Activation Method
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::insertActivationParameterWidget(QWidget* widget, bool enable, bool unhide) {
+void MainWindowDialog::insertActivationParameterWidget(QWidget* widget, bool enable, bool unhide) {
     if(widget != nullptr) {
         if(widget->layout() != ui->hlActivationParameter) {
             ui->hlActivationParameter->insertWidget(0, widget, 0);
@@ -84,7 +84,7 @@ void MainWindow::insertActivationParameterWidget(QWidget* widget, bool enable, b
     }
 }
 
-void MainWindow::removeActivationParameterWidget(QWidget* widget, bool disable, bool hide) {
+void MainWindowDialog::removeActivationParameterWidget(QWidget* widget, bool disable, bool hide) {
     if(widget != nullptr) {
         if(widget->layout() == ui->hlActivationParameter) {
             ui->hlActivationParameter->removeWidget(widget);
@@ -95,7 +95,7 @@ void MainWindow::removeActivationParameterWidget(QWidget* widget, bool disable, 
     }
 }
 
-void MainWindow::changeActivationMethod(int method_index) {
+void MainWindowDialog::changeActivationMethod(int method_index) {
     /* Clear linActivationParameter's text to allow the placeholder text of
      * the selected activation method to be displayed later on.
      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -136,7 +136,7 @@ void MainWindow::changeActivationMethod(int method_index) {
     }
 }
 
-bool MainWindow::changeActivationMethod(const QString& method) {
+bool MainWindowDialog::changeActivationMethod(const QString& method) {
     if(JsonSettingsDialog::ActivationMethodResolverSTOI.contains(method)) {
         ui->cbxActivationMethod->setCurrentIndex(JsonSettingsDialog::ActivationMethodResolverSTOI[method]);
         return true;
@@ -145,7 +145,7 @@ bool MainWindow::changeActivationMethod(const QString& method) {
     return false;
 }
 
-void MainWindow::editActivationMethodParameter() {
+void MainWindowDialog::editActivationMethodParameter() {
     if(ui->btnEditActivationParameter->text() == "Edit" && selectedActivationMethod != ACTIVATION_METHOD::NOTHING) {
         ui->btnEditActivationParameter->setText("Confirm");
         ui->linActivationParameter->setEnabled(true);
@@ -193,7 +193,7 @@ void MainWindow::editActivationMethodParameter() {
     }
 }
 
-void MainWindow::clearActivationMethodParameter() {
+void MainWindowDialog::clearActivationMethodParameter() {
     ui->linActivationParameter->clear();
 
     switch(selectedActivationMethod) {
@@ -231,7 +231,7 @@ void MainWindow::clearActivationMethodParameter() {
 
 // Keyboard Modifier Dropdown
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::handleModifierListBitmaskChanged(const quint32& bitmask) {
+void MainWindowDialog::handleModifierListBitmaskChanged(const quint32& bitmask) {
     ampHotkeyModifiersBitmask = bitmask;
 }
 
@@ -240,7 +240,7 @@ void MainWindow::handleModifierListBitmaskChanged(const quint32& bitmask) {
 
 // Hotkey Input / Recorder
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::updateUiWithRecordedWindowsHotkey(QHotkeyInput::WindowsHotkey windows_hotkey) {
+void MainWindowDialog::updateUiWithRecordedWindowsHotkey(QHotkeyInput::WindowsHotkey windows_hotkey) {
     QDebugConsoleContext dbg_console_context { dbgConsole, "updateUiWithRecordedWindowsHotkey" };
 
     const QString& hex_vkid { QString { "0x%1" }.arg(QString::number(windows_hotkey.Vkid, 16), 2, QChar { '0' }) };
@@ -251,7 +251,7 @@ void MainWindow::updateUiWithRecordedWindowsHotkey(QHotkeyInput::WindowsHotkey w
     dbgConsole->log({"Ui has been set to use recorded hotkey: ", windows_hotkey.ToString()});
 }
 
-void MainWindow::updateHotkeyInputWithNewModifierBitmask(const quint32& new_modifier_bitmask) {
+void MainWindowDialog::updateHotkeyInputWithNewModifierBitmask(const quint32& new_modifier_bitmask) {
     ampwHotkeyRecorder->clear();
 }
 
@@ -260,7 +260,7 @@ void MainWindow::updateHotkeyInputWithNewModifierBitmask(const quint32& new_modi
 
 // VKID Table Dialog
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::spawnVkidTableDialog() {
+void MainWindowDialog::spawnVkidTableDialog() {
     if(vkidTableDialog == nullptr) {
         vkidTableDialog = new VkidTableDialog { this };
 
@@ -277,7 +277,7 @@ void MainWindow::spawnVkidTableDialog() {
 
 // Hotkey Activation Method
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-QString MainWindow::setAmpHotkeyVkid(const quint32& vkid) {
+QString MainWindowDialog::setAmpHotkeyVkid(const quint32& vkid) {
     ampHotkeyVkid = vkid;
 
     unregisterAmpHotkey();
@@ -301,7 +301,7 @@ QString MainWindow::setAmpHotkeyVkid(const quint32& vkid) {
     return QString {};
 }
 
-QString MainWindow::setAmpHotkeyVkid(const QString& vkid_hexstr) {
+QString MainWindowDialog::setAmpHotkeyVkid(const QString& vkid_hexstr) {
     QDebugConsoleContext dbg_console_context { dbgConsole, "setAmpHotkeyVkid(QString)" };
 
     if(!vkid_hexstr.size()) {
@@ -327,7 +327,7 @@ QString MainWindow::setAmpHotkeyVkid(const QString& vkid_hexstr) {
     }
 }
 
-bool MainWindow::registerAmpHotkey() {
+bool MainWindowDialog::registerAmpHotkey() {
     QDebugConsoleContext { dbgConsole, "registerAmpHotkey" };
 
     BOOL result { RegisterHotKey(HWND(winId()), ampHotkeyId, MOD_NOREPEAT | ampHotkeyModifiersBitmask, ampHotkeyVkid) };
@@ -345,7 +345,7 @@ bool MainWindow::registerAmpHotkey() {
     return result;
 }
 
-bool MainWindow::unregisterAmpHotkey() {
+bool MainWindowDialog::unregisterAmpHotkey() {
     QDebugConsoleContext { dbgConsole, "unregisterAmpHotkey" };
 
     BOOL result { UnregisterHotKey(HWND(winId()), ampHotkeyId) };
@@ -357,7 +357,7 @@ bool MainWindow::unregisterAmpHotkey() {
     return result;
 }
 
-void MainWindow::setAmToHotkey() {
+void MainWindowDialog::setAmToHotkey() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "setActivationMethodToHotkey" };
 
     dbgConsole->log("Set activation method to: hotkey.");
@@ -367,8 +367,8 @@ void MainWindow::setAmToHotkey() {
 
     unregisterAmpHotkey();
 
-    connect(this, &MainWindow::targetHotkeyWasPressed,
-            this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
+    connect(this, &MainWindowDialog::targetHotkeyWasPressed,
+            this, &MainWindowDialog::activateBecauseTargetHotkeyWasPressed);
 
     ui->linActivationParameter->setPlaceholderText("VKID, e.g. 0x6A (Numpad *)");
 
@@ -389,18 +389,18 @@ void MainWindow::setAmToHotkey() {
     insertActivationParameterWidget(btnSpawnVkidTableDialog);
 }
 
-void MainWindow::unsetAmToHotkey() {
+void MainWindowDialog::unsetAmToHotkey() {
     unregisterAmpHotkey();
 
-    disconnect(this, &MainWindow::targetHotkeyWasPressed,
-               this, &MainWindow::activateBecauseTargetHotkeyWasPressed);
+    disconnect(this, &MainWindowDialog::targetHotkeyWasPressed,
+               this, &MainWindowDialog::activateBecauseTargetHotkeyWasPressed);
 
     removeActivationParameterWidget(ampwHotkeyRecorder);
     removeActivationParameterWidget(ampwHotkeyModifierDropdown);
     removeActivationParameterWidget(btnSpawnVkidTableDialog);
 }
 
-void MainWindow::activateBecauseTargetHotkeyWasPressed() {
+void MainWindowDialog::activateBecauseTargetHotkeyWasPressed() {
     if(toggleCursorLockState()) {
         dbgConsole->log("Activated cursor lock via hotkey.");
         seLockActivated.play();
@@ -415,7 +415,7 @@ void MainWindow::activateBecauseTargetHotkeyWasPressed() {
 
 // Process Scanner Dialog
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE process_scanner_scope) {
+void MainWindowDialog::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE process_scanner_scope) {
     QDebugConsoleContext { dbgConsole, "spawnProcessScannerDialog" };
 
     if(processScannerDialog == nullptr) {
@@ -447,7 +447,7 @@ void MainWindow::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE process_sc
 
 // Process Image Activation Method
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::setAmpProcessImageName(const QString& process_image_name) {
+void MainWindowDialog::setAmpProcessImageName(const QString& process_image_name) {
     amParamProcessImageName = process_image_name;
 
     if(selectedActivationMethod == ACTIVATION_METHOD::PROCESS_IMAGE) {
@@ -455,7 +455,7 @@ void MainWindow::setAmpProcessImageName(const QString& process_image_name) {
     }
 }
 
-void MainWindow::setAmToProcessImageName() {
+void MainWindowDialog::setAmToProcessImageName() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "setAmToProcessImageName" };
 
     selectedActivationMethod = ACTIVATION_METHOD::PROCESS_IMAGE;
@@ -472,12 +472,12 @@ void MainWindow::setAmToProcessImageName() {
     insertActivationParameterWidget(btnSpawnProcessScanner, false);
 
     btnSpawnProcessScannerConnection = connect(btnSpawnProcessScanner, &QPushButton::clicked,
-                                               std::bind(&MainWindow::spawnProcessScannerDialog, this, ProcessScanner::PROCESS_MODE));
+                                               std::bind(&MainWindowDialog::spawnProcessScannerDialog, this, ProcessScanner::PROCESS_MODE));
 
     dbgConsole->log("Activation method has been set to process image name.");
 }
 
-void MainWindow::unsetAmToProcessImageName() {
+void MainWindowDialog::unsetAmToProcessImageName() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "unsetAmToProcessImageName" };
 
     disconnect(timedActivationMethodConnection);
@@ -485,7 +485,7 @@ void MainWindow::unsetAmToProcessImageName() {
     disconnect(btnSpawnProcessScannerConnection);
 }
 
-void MainWindow::activateIfTargetProcessRunning() {
+void MainWindowDialog::activateIfTargetProcessRunning() {
     if(!amParamProcessImageName.size()) {
         setCursorLockEnabled(false);
         processHasBeenFound = false;
@@ -541,7 +541,7 @@ void MainWindow::activateIfTargetProcessRunning() {
 
 // Foreground Window Activation Method
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::setAmpForegroundWindowTitle(const QString& foreground_window_title) {
+void MainWindowDialog::setAmpForegroundWindowTitle(const QString& foreground_window_title) {
     amParamForegroundWindowTitle = foreground_window_title;
 
     if(selectedActivationMethod == ACTIVATION_METHOD::WINDOW_TITLE) {
@@ -549,7 +549,7 @@ void MainWindow::setAmpForegroundWindowTitle(const QString& foreground_window_ti
     }
 }
 
-void MainWindow::setAmToForegroundWindowTitle() {
+void MainWindowDialog::setAmToForegroundWindowTitle() {
     QDebugConsoleContext dbg_console_context { dbgConsole, "setAmToForegroundWindowTitle" };
 
     dbgConsole->log("Activation mode set to window title. Right click the edit button to grab the name of the next foreground window that you select.");
@@ -568,18 +568,18 @@ void MainWindow::setAmToForegroundWindowTitle() {
     insertActivationParameterWidget(btnStartWindowGrabber, false);
     insertActivationParameterWidget(btnSpawnProcessScanner, false);
     btnSpawnProcessScannerConnection = connect(btnSpawnProcessScanner, &QPushButton::clicked,
-                                               std::bind(&MainWindow::spawnProcessScannerDialog, this, ProcessScanner::WINDOW_MODE));
+                                               std::bind(&MainWindowDialog::spawnProcessScannerDialog, this, ProcessScanner::WINDOW_MODE));
 
 }
 
-void MainWindow::unsetAmToForegroundWindowTitle() {
+void MainWindowDialog::unsetAmToForegroundWindowTitle() {
     disconnect(timedActivationMethodConnection);
     removeActivationParameterWidget(btnSpawnProcessScanner);
     removeActivationParameterWidget(btnStartWindowGrabber);
     disconnect(btnSpawnProcessScannerConnection);
 }
 
-void MainWindow::activateIfForegroundWindowMatchesTarget() {
+void MainWindowDialog::activateIfForegroundWindowMatchesTarget() {
     if(!amParamForegroundWindowTitle.size()) {
         setCursorLockEnabled(false);
         windowTitleHasBeenFound = false;
@@ -617,7 +617,7 @@ void MainWindow::activateIfForegroundWindowMatchesTarget() {
 
 // Foreground Window Grabber
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::onWindowGrabberTimerTimeout() {
+void MainWindowDialog::onWindowGrabberTimerTimeout() {
     const auto& stop_and_reset {
         [&]() -> void {
             btnStartWindowGrabber->setText("Grab");
@@ -669,7 +669,7 @@ void MainWindow::onWindowGrabberTimerTimeout() {
     }
 }
 
-void MainWindow::onWindowGrabberButtonClicked() {
+void MainWindowDialog::onWindowGrabberButtonClicked() {
     if(btnStartWindowGrabber->text() == "Grab") {
         btnStartWindowGrabber->setText("Stop");
 
@@ -695,7 +695,7 @@ void MainWindow::onWindowGrabberButtonClicked() {
 
 // JSON Settings Dialog
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::spawnJsonSettingsDialog() {
+void MainWindowDialog::spawnJsonSettingsDialog() {
     if(jsonSettingsDialog == nullptr) {
         jsonSettingsDialog = new JsonSettingsDialog { jsonConfigFilePath, this };
 
@@ -707,7 +707,7 @@ void MainWindow::spawnJsonSettingsDialog() {
     }
 }
 
-void MainWindow::loadAndApplyJsonSettings() {
+void MainWindowDialog::loadAndApplyJsonSettings() {
     QFileInfo json_file_info { jsonConfigFilePath };
     JsonSettingsDialog::JsonSettings json_settings;
     json_settings.StylesheetPath = styleSheetFilePath;    // Default stylesheet location.
@@ -745,7 +745,7 @@ void MainWindow::loadAndApplyJsonSettings() {
 
 // Sound Effects
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::setSoundEffectsMutedState(bool state) {
+void MainWindowDialog::setSoundEffectsMutedState(bool state) {
     soundEffectsMuted = state;
 
     seLockActivated.setMuted(soundEffectsMuted);
@@ -755,7 +755,7 @@ void MainWindow::setSoundEffectsMutedState(bool state) {
     ui->btnMuteSoundEffects->setText(state ? "Unmute" : "Mute");
 }
 
-void MainWindow::toggleSoundEffectsMuted() {
+void MainWindowDialog::toggleSoundEffectsMuted() {
     soundEffectsMuted ^= true;
     setSoundEffectsMutedState(soundEffectsMuted);
 }
@@ -766,7 +766,7 @@ void MainWindow::toggleSoundEffectsMuted() {
 
 // Cursor Lock
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindow::setCursorLockEnabled(const bool& state) {
+void MainWindowDialog::setCursorLockEnabled(const bool& state) {
     if(state) {
         HWND foreground_window_hwnd { GetForegroundWindow() };
         RECT foreground_window_rect;
@@ -780,7 +780,7 @@ void MainWindow::setCursorLockEnabled(const bool& state) {
     lastCursorLockStateSet = state;
 }
 
-bool MainWindow::toggleCursorLockState() {
+bool MainWindowDialog::toggleCursorLockState() {
     setCursorLockEnabled(lastCursorLockStateSet ^ true);
     return lastCursorLockStateSet;
 }
@@ -790,7 +790,7 @@ bool MainWindow::toggleCursorLockState() {
 
 
 
-bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintptr* result) {
+bool MainWindowDialog::nativeEvent(const QByteArray& event_type, void* message, qintptr* result) {
     Q_UNUSED(event_type);
     Q_UNUSED(result);
 
@@ -826,12 +826,12 @@ bool MainWindow::nativeEvent(const QByteArray& event_type, void* message, qintpt
 
 
 
-MainWindow::MainWindow(QWidget* parent)
+MainWindowDialog::MainWindowDialog(QWidget* parent)
     :
       // Debug Console & Related Widgets Initialization
 
       QMainWindow                         { parent                       },
-      ui                                  { new Ui::MainWindow           },
+      ui                                  { new Ui::MainWindowDialog           },
 
       dbgConsole                          { new QDebugConsole   { this } },
       vblDebugConsoleLayout               { new QVBoxLayout              },
@@ -964,8 +964,8 @@ MainWindow::MainWindow(QWidget* parent)
     connect(ui->btnSettings,                   SIGNAL(clicked()),
             this,                              SLOT(spawnJsonSettingsDialog()));
 
-    ui->btnSettings->installEventFilter(new AnonymousEventFilter<MainWindow*> {
-                                            [](QObject*, QEvent* event, MainWindow* parent) -> bool {
+    ui->btnSettings->installEventFilter(new AnonymousEventFilter<MainWindowDialog*> {
+                                            [](QObject*, QEvent* event, MainWindowDialog* parent) -> bool {
                                                 if(event->type() == QEvent::MouseButtonRelease) {
                                                     QMouseEvent* mouse_event { reinterpret_cast<QMouseEvent*>(event) };
 
@@ -989,7 +989,7 @@ MainWindow::MainWindow(QWidget* parent)
     loadAndApplyJsonSettings();    // Also responsible for loading and applying stylesheet, based on the JSON file values.
 }
 
-MainWindow::~MainWindow() {
+MainWindowDialog::~MainWindowDialog() {
     setCursorLockEnabled(false);
     delete ui;
 }

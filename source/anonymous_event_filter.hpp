@@ -1,7 +1,7 @@
-#ifndef ANONYMOUSEVENTFILTER_HPP
-#define ANONYMOUSEVENTFILTER_HPP
+#ifndef ANONYMOUS_EVENT_FILTER_HPP
+#define ANONYMOUS_EVENT_FILTER_HPP
 
-#include <QObject>
+#include <QtCore/QObject>
 
 #include <functional>
 #include <tuple>
@@ -27,4 +27,4 @@ public:
     }
 };
 
-#endif // ANONYMOUSEVENTFILTER_HPP
+#endif // ANONYMOUS_EVENT_FILTER_HPP

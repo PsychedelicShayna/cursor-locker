@@ -1,21 +1,21 @@
-#ifndef QDEBUGCONSOLE_HPP
-#define QDEBUGCONSOLE_HPP
+#ifndef DEBUG_CONSOLE_WIDGET_HPP
+#define DEBUG_CONSOLE_WIDGET_HPP
 
-#include <QScrollBar>
-#include <QTextEdit>
-#include <QObject>
-#include <QWidget>
+#include <QtCore/QObject>
 
-// Context menu widgets
-#include <QAction>
-#include <QMenu>
+#include <QtWidgets/QScrollBar>
+#include <QtWidgets/QTextEdit>
+#include <QtWidgets/QWidget>
+
+#include <QtWidgets/QMenu>
+#include <QtGui/QAction>
 
 class QDebugConsole : public QTextEdit {
 Q_OBJECT
 private:
-    QMenu*      contextMenu;             //
-    QAction*    cmActionClearConsole;    //
-    QMenu*      cmSubmenuLogLevels;      //
+    QMenu*      contextMenu;
+    QAction*    cmActionClearConsole;
+    QMenu*      cmSubmenuLogLevels;
 
 public:
     enum LOG_LEVEL {
@@ -60,4 +60,4 @@ public:
     virtual ~QDebugConsoleContext() override;
 };
 
-#endif // QDEBUGCONSOLE_HPP
+#endif // DEBUG_CONSOLE_WIDGET_HPP

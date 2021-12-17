@@ -1,8 +1,8 @@
 #ifndef WINAPI_UTILITIES_HPP
 #define WINAPI_UTILITIES_HPP
 
-#include <QString>
-#include <QMap>
+#include <QtCore/QString>
+#include <QtCore/QMap>
 
 enum WINAPI_MODIFIER {
     WINMOD_NULLMOD    = NULL,

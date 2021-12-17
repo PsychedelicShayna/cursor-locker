@@ -1,13 +1,12 @@
 #ifndef PROCESSSCANNER_HPP
 #define PROCESSSCANNER_HPP
 
-#include <QObject>
-#include <QTreeWidgetItem>
+#include <QtCore/QObject>
+#include <QtWidgets/QTreeWidgetItem>
 
 #ifndef WIN32_MEAN_AND_LEAN
 #define WIN32_MEAN_AND_LEAN
 #endif
-
 
 #include <Windows.h>
 #include <TlHelp32.h>

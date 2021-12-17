@@ -1,5 +1,5 @@
-#ifndef JSON_SETTINGS_DIALOG_H
-#define JSON_SETTINGS_DIALOG_H
+#ifndef JSON_SETTINGS_DIALOG_HXX
+#define JSON_SETTINGS_DIALOG_HXX
 
 #ifndef WIN32_MEAN_AND_LEAN
 #define WIN32_MEAN_AND_LEAN
@@ -18,7 +18,6 @@
 #include <tuple>
 
 #include "keyboard_modifier_list_widget.hpp"
-
 #include "winapi_utilities.hpp"
 
 namespace Ui {
@@ -65,4 +64,4 @@ public:
     virtual ~JsonSettingsDialog() override;
 };
 
-#endif // JSON_SETTINGS_DIALOG_H
+#endif // JSON_SETTINGS_DIALOG_HXX

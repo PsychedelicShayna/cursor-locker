@@ -1,9 +1,9 @@
-#ifndef QHOTKEYINPUT_HXX
-#define QHOTKEYINPUT_HXX
+#ifndef HOTKEY_INPUT_WIDGET_HPP
+#define HOTKEY_INPUT_WIDGET_HPP
 
-#include <QLineEdit>
-#include <QKeyEvent>
-#include <QEvent>
+#include <QtWidgets/QLineEdit>
+#include <QtGui/QKeyEvent>
+#include <QtCore/QEvent>
 
 #include "winapi_utilities.hpp"
 
@@ -52,4 +52,4 @@ public:
     QHotkeyInput(QWidget* = nullptr);
 };
 
-#endif // QHOTKEYINPUT_HXX
+#endif // HOTKEY_INPUT_WIDGET_HPP

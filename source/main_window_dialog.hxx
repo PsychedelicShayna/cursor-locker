@@ -9,65 +9,57 @@
 #define UNICODE
 #endif
 
-#include <QMainWindow>
-#include <QPushButton>
-#include <QMessageBox>
-#include <QScrollBar>
-#include <QMenu>
-#include <QLine>
+#include <QtGui/QMouseEvent>
+#include <QtCore/QEvent>
 
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QFileInfo>
-#include <QFile>
+#include <QtCore/QTimer>
+#include <QtCore/QPair>
 
-#include <QResource>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
 
-#include <QStandardItemModel>
-#include <QStandardItem>
+#include <QtCore/QFileInfo>
+#include <QtCore/QFile>
 
-#include <QTimer>
-#include <QPair>
-
-#include <QMouseEvent>
-#include <QEvent>
+#include <QtWidgets/QMainWindow>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QScrollBar>
+#include <QtWidgets/QMenu>
 
 #include <QtMultimedia/QSoundEffect>
+#include <QtCore/QResource>
 
 #ifndef WIN32_MEAN_AND_LEAN
 #define WIN32_MEAN_AND_LEAN
 #endif
 
 #include <Windows.h>
-#include <TlHelp32.h>
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <tuple>
-
-
+// Dialogs
 #include "process_scanner_dialog.hxx"
 #include "json_settings_dialog.hxx"
 #include "vkid_table_dialog.hxx"
 
+// Widgets
 #include "winapi_utilities.hpp"
 #include "debug_console_widget.hpp"
 #include "hotkey_input_widget.hpp"
 #include "keyboard_modifier_list_widget.hpp"
 
+// Other
 #include "anonymous_event_filter.hpp"
 
 namespace Ui {
-    class MainWindow;
+    class MainWindowDialog;
 }
 
 enum struct ACTIVATION_METHOD;
 
-class MainWindow : public QMainWindow {
+class MainWindowDialog : public QMainWindow {
 Q_OBJECT
 protected:
-    Ui::MainWindow* ui;
+    Ui::MainWindowDialog* ui;
 
     // Debug Console
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -222,8 +214,8 @@ signals:
     void targetHotkeyWasPressed();
 
 public:
-    explicit MainWindow(QWidget* parent = nullptr);
-    virtual ~MainWindow() override;
+    explicit MainWindowDialog(QWidget* parent = nullptr);
+    virtual ~MainWindowDialog() override;
 };
 
 
