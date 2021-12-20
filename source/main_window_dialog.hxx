@@ -43,8 +43,7 @@
 
 // Widgets
 #include "winapi_utilities.hpp"
-#include "debug_console_widget.hpp"
-#include "hotkey_input_widget.hpp"
+#include "hotkey_recorder_widget.hpp"
 #include "keyboard_modifier_list_widget.hpp"
 
 // Other
@@ -63,12 +62,12 @@ protected:
 
     // Debug Console
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    QDebugConsole*  dbgConsole;               // The QDebugConsole instance shown at the bottom of the GUI, used for logging.
-    QVBoxLayout*    vblDebugConsoleLayout;    // Layout that dbgConsole is contained in, set in the constructor.
-
-    QMenu*      dbgConsoleContextMenu;    // The console's context menu QMenu that gets presented when showConsoleContextMenu is called.
-    QAction*    dbgCCMActionClear;
-    QMenu*      dbgCCMSubMenuLogLevels;
+    // QDebugConsole*  dbgConsole;               // The QDebugConsole instance shown at the bottom of the GUI, used for logging.
+    // QVBoxLayout*    vblDebugConsoleLayout;    // Layout that dbgConsole is contained in, set in the constructor.
+    //
+    // QMenu*      dbgConsoleContextMenu;    // The console's context menu QMenu that gets presented when showConsoleContextMenu is called.
+    // QAction*    dbgCCMActionClear;
+    // QMenu*      dbgCCMSubMenuLogLevels;
 
     const QString styleSheetFilePath;
 
@@ -97,8 +96,8 @@ protected:
 
     // Hotkey Input / Recorder
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    QHotkeyInput*       ampwHotkeyRecorder;             // Instance of QHotkeyInput that records hotkeys entered into it, and updates the relevant UI components with the recorded hotkey information.
-    Q_SLOT void         updateUiWithRecordedWindowsHotkey(QHotkeyInput::WindowsHotkey);
+    QHotkeyRecorder*     ampwHotkeyRecorder;    // Instance of QHotkeyRecorder that records hotkeys entered into it, and updates the relevant UI components with the recorded hotkey information.
+    Q_SLOT void         updateUiWithRecordedWindowsHotkey(QHotkeyRecorder::WindowsHotkey);
     Q_SLOT void         updateHotkeyInputWithNewModifierBitmask(const quint32& bitmask);
 
 

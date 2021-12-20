@@ -27,7 +27,7 @@ void QKbModifierList::handleModelItemClicked(QModelIndex index) {
     } else if(item_check_state == Qt::Unchecked) {
         item->setCheckState(Qt::Checked);
     } else {
-        qDebug() << "QKbModifierList::handleItemClicked encountered an unknown Qt::CheckState value: " << item_check_state;
+        qWarning() << "QKbModifierList::handleItemClicked encountered an unknown Qt::CheckState value:" << item_check_state;
     }
 }
 
@@ -55,7 +55,6 @@ void QKbModifierList::AddCheckableItem(const QString& label, const Qt::CheckStat
 
 void QKbModifierList::AddModifierItem(const WINAPI_MODIFIER& modifier) {
     AddCheckableItem(WinApiKbModifierToQString(modifier, true));
-    qDebug() << "AddModifierItem called, passing modifier to AddCheckableItem with conversion: " << WinApiKbModifierToQString(modifier);
 }
 
 quint32 QKbModifierList::GetModifierCheckStateAsBitmask() const {

@@ -37,8 +37,6 @@ void ProcessScannerDialog::setAllTopLevelItemsHidden(bool hidden) {
 }
 
 void ProcessScannerDialog::applySearchFilterToTree() {
-    QDebugConsoleContext dbg_console_context { dbgConsole, "applySearchFilterToTree" };
-
     auto search_filter  { ui->linSearchFilter->text() };
     auto tree           { ui->twProcessTree };
 
@@ -123,8 +121,6 @@ void ProcessScannerDialog::applySearchFilterToTree() {
 }
 
 void ProcessScannerDialog::integrateProcessInfoIntoTree(ProcessScanner::ProcessInfo process_info) {
-    QDebugConsoleContext dbg_console_context { dbgConsole, "integrateProcessInfoIntoTree" };
-
     auto tree        { ui->twProcessTree };
     auto root_items  { collectTreeRoot(tree) };
 
@@ -175,18 +171,16 @@ void ProcessScannerDialog::integrateProcessInfoIntoTree(ProcessScanner::ProcessI
 }
 
 void ProcessScannerDialog::applyWhitelistToTree() {
-    QDebugConsoleContext dbg_console_context { dbgConsole, "applyWhitelistToTree" };
-
     auto tree { ui->twProcessTree     };
 
     for(auto iter_root_item : collectTreeRoot(tree)) {
         if(!rootItemRemovalWhitelist.contains(iter_root_item)) {
-            dbgConsole->log({"Deleting root item: ", iter_root_item->text(0)});
+            qInfo() << "Deleting root item: " << iter_root_item->text(0);
             delete iter_root_item;
         } else {
             for(auto iter_child_item : collectTreeChildren(iter_root_item)) {
                 if(!childItemRemovalWhitelist.contains(iter_child_item)) {
-                    dbgConsole->log({"Deleting child item: ", iter_child_item->text(0)});
+                    qInfo() << "Deleting child item: " << iter_child_item->text(0);
                     delete iter_child_item;
                 }
             }
@@ -220,44 +214,41 @@ void ProcessScannerDialog::onProcessScannerScanFinished() {
 void ProcessScannerDialog::emitFilteredProcessScannerScanRequest() {
     if(scannerCurrentlyScanning) return;
 
-    QDebugConsoleContext { dbgConsole, "(filteredProcessScanRequest)" };
-    dbgConsole->log("Filtered process scan has been requested.");
+    qInfo() << "Filtered process scan has been requested.";
 
     int32_t scan_filters { (processScannerScope & ProcessScanner::PROCESS_MODE) ? NULL : ProcessScanner::FILTER_WINDOWLESS_PROCESSES };
 
     if(ui->cbFilterInvisibleWindows->isChecked()) {
         scan_filters |= ProcessScanner::FILTER_INVISIBLE_WINDOWS;
-        dbgConsole->log("Added FILTER_INVISIBLE_WINDOWS to filter bitmask.");
+        qInfo() << "Added FILTER_INVISIBLE_WINDOWS to filter bitmask.";
     }
 
     if(ui->cbFilterDuplicateWindows->isChecked()) {
         scan_filters |= ProcessScanner::FILTER_DUPLICATE_WINDOWS;
-        dbgConsole->log("Added FILTER_DUPLICATE_WINDOWS to filter bitmask.");
+        qInfo() << "Added FILTER_DUPLICATE_WINDOWS to filter bitmask.";
     }
 
     if(ui->cbFilterDuplicateProcesses->isChecked()) {
         scan_filters |= ProcessScanner::FILTER_DUPLICATE_PROCESSES;
-        dbgConsole->log("Added FILTER_DUPLICATE_PROCESSES to filter bitmask.");
+        qInfo() << "Added FILTER_DUPLICATE_PROCESSES to filter bitmask.";
     }
 
     if(scan_filters == NULL) {
-        dbgConsole->log("No scan filters have been provided.");
+        qInfo() << "No scan filters have been provided.";
     }
 
     emit requestProcessScannerScan(processScannerScope, static_cast<ProcessScanner::SCAN_FILTERS>(scan_filters));
 }
 
 void ProcessScannerDialog::onAutoScannerTimerTimeout() {
-    QDebugConsoleContext dbg_console_context { dbgConsole, "AutoScannerTimeout" };
-
     emitFilteredProcessScannerScanRequest();
     autoScannerTimer->stop();
 
     if(ui->cbAutoScanner->isChecked()) {
         autoScannerTimer->start(autoScannerInterval);
-        dbgConsole->log({"Autoscan timer started with interval: ", QString::number(autoScannerInterval)});
+        qInfo() << "Autoscan timer started with interval: " << QString::number(autoScannerInterval);
     } else {
-        dbgConsole->log("Autoscan timer has been deactivated.");
+        qInfo() << "Autoscan timer has been deactivated.";
     }
 }
 
@@ -285,11 +276,6 @@ ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& sca
       QDialog               { parent                       },
       ui                    { new Ui::ProcessScannerDialog },
 
-      // Debug console & related widgets initialization.
-      dbgConsole            { new QDebugConsole { this } },
-      grpConsole            { new QGroupBox     { this } },
-      splConsole            { new QSplitter     { this } },
-
       treeWidgetContextMenu { new QMenu         { this } },
 
       // Member variable initialization.
@@ -309,23 +295,22 @@ ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& sca
 
     setAttribute(Qt::WA_DeleteOnClose);
 
-    /* Initialize & Configure Debug Console * * * * * * * * * * * * */
-    QVBoxLayout* grpConsoleLayout { new QVBoxLayout { grpConsole } };
-    grpConsoleLayout->addWidget(dbgConsole);
-    grpConsole->setLayout(grpConsoleLayout);
-    grpConsole->setTitle("Debug Console");
-
-    splConsole->setOrientation(Qt::Orientation::Vertical);
-    splConsole->addWidget(ui->twProcessTree);
-    splConsole->addWidget(grpConsole);
-
-    splConsole->setCollapsible(0, false);
-    splConsole->setCollapsible(1, true);
-    splConsole->setStretchFactor(0, 0);
-    splConsole->setStretchFactor(0, 0);
-    splConsole->setSizes({400, 0});
-
-    ui->vlTree->addWidget(splConsole, 0);
+    // /* Initialize & Configure Debug Console * * * * * * * * * * * * */
+    // QVBoxLayout* grpConsoleLayout { new QVBoxLayout { grpConsole } };
+    // grpConsoleLayout->addWidget(dbgConsole);
+    // grpConsole->setLayout(grpConsoleLayout);
+    // grpConsole->setTitle("Debug Console");
+    //
+    // splConsole->setOrientation(Qt::Orientation::Vertical);
+    // splConsole->addWidget(ui->twProcessTree);
+    // splConsole->addWidget(grpConsole);
+    //
+    // splConsole->setCollapsible(0, false);
+    // splConsole->setCollapsible(1, true);
+    // splConsole->setStretchFactor(0, 0);
+    // splConsole->setStretchFactor(0, 0);
+    // splConsole->setSizes({400, 0});
+    // ui->vlTree->addWidget(splConsole, 0);
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
     // Set initial tree widget header section sizes.
@@ -394,7 +379,7 @@ ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& sca
     connect(ui->btnCancel,              SIGNAL(clicked()),
             this,                       SLOT(close()));
 
-    connect(&processScannerThread,       SIGNAL(started()),
+    connect(&processScannerThread,      SIGNAL(started()),
            this,                        SLOT(emitFilteredProcessScannerScanRequest()));
 
     connect(&processScanner,            SIGNAL(ProcessInformationReady(ProcessScanner::ProcessInfo)),

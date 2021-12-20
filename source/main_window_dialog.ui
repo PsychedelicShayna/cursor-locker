@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>628</width>
-    <height>276</height>
+    <width>512</width>
+    <height>122</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>512</width>
-    <height>230</height>
+    <height>0</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -26,7 +26,7 @@
    </size>
   </property>
   <widget class="QWidget" name="gdMain">
-   <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1">
+   <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0">
     <item>
      <widget class="QGroupBox" name="vlActivation">
       <property name="title">
@@ -152,13 +152,6 @@
         </layout>
        </item>
       </layout>
-     </widget>
-    </item>
-    <item>
-     <widget class="QGroupBox" name="grpDebugConsole">
-      <property name="title">
-       <string>Debug Console</string>
-      </property>
      </widget>
     </item>
    </layout>

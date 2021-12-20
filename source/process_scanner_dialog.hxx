@@ -13,7 +13,6 @@
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
 
-#include "debug_console_widget.hpp"
 #include "process_scanner.hpp"
 
 namespace Ui {
@@ -33,9 +32,9 @@ private:
     Ui::ProcessScannerDialog*    ui;
 
     // Debug console, and related widgets.
-    QDebugConsole*    dbgConsole;
-    QGroupBox*        grpConsole;
-    QSplitter*        splConsole;
+    // QDebugConsole*    dbgConsole;
+    // QGroupBox*        grpConsole;
+    // QSplitter*        splConsole;
 
     QMenu*    treeWidgetContextMenu;
 
