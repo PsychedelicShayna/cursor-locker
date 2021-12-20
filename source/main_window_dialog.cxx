@@ -972,7 +972,7 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
                                                 if(event->type() == QEvent::MouseButtonRelease) {
                                                     QMouseEvent* mouse_event { reinterpret_cast<QMouseEvent*>(event) };
 
-                                                    if(mouse_event->button() == Qt::MouseButton::RightButton) {
+                                                    if(mouse_event->button() == Qt::MouseButton::RightButton && parent->selectedActivationMethod == ACTIVATION_METHOD::NOTHING) {
                                                         parent->loadAndApplyJsonSettings();
                                                         event->accept();
                                                         return true;
