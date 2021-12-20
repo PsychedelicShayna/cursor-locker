@@ -48,8 +48,11 @@
          <enum>QAbstractItemView::SelectRows</enum>
         </property>
         <property name="sortingEnabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
+        <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+         <bool>false</bool>
+        </attribute>
         <column>
          <property name="text">
           <string>Description</string>

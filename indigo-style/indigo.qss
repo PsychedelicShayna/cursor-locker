@@ -177,11 +177,6 @@ QHeaderView::section:vertical
 {
     background-color: rgb(30, 30, 100);
 }
-
-QHeaderView::up-arrow,
-QHeaderView::down-arrow {
-    image: transparent;
-}
 /* ---------------------------------------------------------------------------------------------------- */
 
 

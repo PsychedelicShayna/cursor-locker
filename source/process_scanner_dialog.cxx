@@ -208,6 +208,7 @@ void ProcessScannerDialog::onProcessScannerScanFinished() {
     scannerCurrentlyScanning = false;
 
     ui->twProcessTree->setSortingEnabled(true);
+    ui->twProcessTree->header()->setSortIndicatorShown(false);
     ui->twProcessTree->sortByColumn(0, Qt::SortOrder::AscendingOrder);
 }
 
