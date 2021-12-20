@@ -105,7 +105,7 @@ QTextEdit {
     border: 1px solid;
     border-radius: 2px;
     border-color: rgb(80, 80, 200);
-    min-height: 22px;
+    min-height: 25px;
     padding-left: 5px;
 }
 
@@ -160,7 +160,7 @@ QMenu::indicator:checked {
 
 QMenu::indicator:unchecked {
     border: 2px solid;
-    border-radus: 2px;
+    border-radius: 2px;
 
     border-color:   rgb(80, 80, 200);
     color: rgb(100, 100, 150);
@@ -356,7 +356,7 @@ QComboBox QAbstractItemView::indicator:checked {
 
 QComboBox QAbstractItemView::indicator:unchecked {
     border: 2px solid;
-    border-radus: 2px;
+    border-radius: 2px;
 
     border-color:   rgb(80, 80, 200);
     color: rgb(100, 100, 150);
@@ -394,7 +394,7 @@ QCheckBox::indicator:checked {
 
 QCheckBox::indicator:unchecked {
     border: 2px solid;
-    border-radus: 2px;
+    border-radius: 2px;
 
     border-color:   rgb(80, 80, 200);
     color: rgb(100, 100, 150);
@@ -412,7 +412,7 @@ QPushButton {
     background-color: rgb(30, 30, 100);
     border-color: rgb(80, 80, 200);
     min-width: 60px;
-    min-height: 22px;
+    min-height: 25px;
     padding-left: 5px;
     padding-right: 5px;
 }
