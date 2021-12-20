@@ -60,15 +60,6 @@ Q_OBJECT
 protected:
     Ui::MainWindowDialog* ui;
 
-    // Debug Console
-    // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    // QDebugConsole*  dbgConsole;               // The QDebugConsole instance shown at the bottom of the GUI, used for logging.
-    // QVBoxLayout*    vblDebugConsoleLayout;    // Layout that dbgConsole is contained in, set in the constructor.
-    //
-    // QMenu*      dbgConsoleContextMenu;    // The console's context menu QMenu that gets presented when showConsoleContextMenu is called.
-    // QAction*    dbgCCMActionClear;
-    // QMenu*      dbgCCMSubMenuLogLevels;
-
     const QString styleSheetFilePath;
 
     Q_SLOT qsizetype loadQssStylesheet(const QString&, QByteArray& out_bytes) const;

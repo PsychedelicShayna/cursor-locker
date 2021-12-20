@@ -31,11 +31,6 @@ signals:
 private:
     Ui::ProcessScannerDialog*    ui;
 
-    // Debug console, and related widgets.
-    // QDebugConsole*    dbgConsole;
-    // QGroupBox*        grpConsole;
-    // QSplitter*        splConsole;
-
     QMenu*    treeWidgetContextMenu;
 
     QTimer*     autoScannerTimer;

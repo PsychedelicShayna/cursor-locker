@@ -894,9 +894,6 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
 
     resize(static_cast<qint32>(minimumWidth() * 1.2), height());
 
-    // vblDebugConsoleLayout->addWidget(dbgConsole);
-    // ui->grpDebugConsole->setLayout(vblDebugConsoleLayout);
-
     seLockActivated.setSource(QUrl::fromLocalFile(":/sounds/lock-activated.wav"));
     seLockDeactivated.setSource(QUrl::fromLocalFile(":/sounds/lock-deactivated.wav"));
     seWindowGrabberTick.setSource(QUrl::fromLocalFile(":/sounds/window-grabber-tick.wav"));
@@ -905,31 +902,23 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
     ampwHotkeyModifierDropdown->setEnabled(false);
     ampwHotkeyModifierDropdown->setHidden(true);
     ampwHotkeyModifierDropdown->setMinimumWidth(90);
-    //ampwHotkeyModifierDropdown->setMaximumHeight(25);
-    //ampwHotkeyModifierDropdown->setMinimumHeight(25);
     ampwHotkeyModifierDropdown->addItem("Modifiers");
     ampwHotkeyModifierDropdown->AddItemsFromBitmask(WINMOD_ALT | WINMOD_CONTROL | WINMOD_SHIFT | WINMOD_WIN);
 
     // Set ampwHotkeyRecorder initial values.
     ampwHotkeyRecorder->setHidden(true);
     ampwHotkeyRecorder->setPlaceholderText("Hotkey Recorder");
-    // ampwHotkeyRecorder->setMaximumHeight(25);
-    // ampwHotkeyRecorder->setMinimumHeight(25);
 
     // btnSpawnProcessScanner initial values.
     btnSpawnProcessScanner->setText("Select");
     btnSpawnProcessScanner->setEnabled(false);
     btnSpawnProcessScanner->setHidden(true);
-    // btnSpawnProcessScanner->setMinimumHeight(25);
 
     btnStartWindowGrabber->setText("Grab");
     btnStartWindowGrabber->setEnabled(false);
     btnStartWindowGrabber->setHidden(true);
-    // btnStartWindowGrabber->setMinimumHeight(25);
 
     btnSpawnVkidTableDialog->setText("VKID Table");
-    // btnSpawnVkidTableDialog->setMinimumHeight(25);
-    // btnSpawnVkidTableDialog->setMaximumHeight(25);
     btnSpawnVkidTableDialog->setEnabled(false);
     btnSpawnVkidTableDialog->setHidden(true);
 

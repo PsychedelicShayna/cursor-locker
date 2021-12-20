@@ -296,24 +296,6 @@ ProcessScannerDialog::ProcessScannerDialog(const ProcessScanner::SCAN_SCOPE& sca
 
     setAttribute(Qt::WA_DeleteOnClose);
 
-    // /* Initialize & Configure Debug Console * * * * * * * * * * * * */
-    // QVBoxLayout* grpConsoleLayout { new QVBoxLayout { grpConsole } };
-    // grpConsoleLayout->addWidget(dbgConsole);
-    // grpConsole->setLayout(grpConsoleLayout);
-    // grpConsole->setTitle("Debug Console");
-    //
-    // splConsole->setOrientation(Qt::Orientation::Vertical);
-    // splConsole->addWidget(ui->twProcessTree);
-    // splConsole->addWidget(grpConsole);
-    //
-    // splConsole->setCollapsible(0, false);
-    // splConsole->setCollapsible(1, true);
-    // splConsole->setStretchFactor(0, 0);
-    // splConsole->setStretchFactor(0, 0);
-    // splConsole->setSizes({400, 0});
-    // ui->vlTree->addWidget(splConsole, 0);
-    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
     // Set initial tree widget header section sizes.
     ui->twProcessTree->header()->resizeSection(0, 250);
     ui->twProcessTree->header()->resizeSection(1, 130);
