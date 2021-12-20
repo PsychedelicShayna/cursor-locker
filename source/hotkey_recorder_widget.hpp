@@ -1,5 +1,5 @@
-#ifndef HOTKEY_INPUT_WIDGET_HPP
-#define HOTKEY_INPUT_WIDGET_HPP
+#ifndef HOTKEY_RECORDER_WIDGET_HPP
+#define HOTKEY_RECORDER_WIDGET_HPP
 
 #include <QtWidgets/QLineEdit>
 #include <QtGui/QKeyEvent>
@@ -7,7 +7,7 @@
 
 #include "winapi_utilities.hpp"
 
-class QHotkeyInput : public QLineEdit {
+class QHotkeyRecorder : public QLineEdit {
 Q_OBJECT
 public:
     struct WindowsHotkey {
@@ -29,7 +29,7 @@ public:
     };
 
 signals:
-    void WindowsHotkeyRecorded(QHotkeyInput::WindowsHotkey);
+    void HotkeyRecorded(QHotkeyRecorder::WindowsHotkey);
 
 protected:
     virtual bool event(QEvent*) override;
@@ -49,7 +49,7 @@ public:
     bool IsRecording() const;
     void ClearState();
 
-    QHotkeyInput(QWidget* = nullptr);
+    QHotkeyRecorder(QWidget* = nullptr);
 };
 
-#endif // HOTKEY_INPUT_WIDGET_HPP
+#endif // HOTKEY_RECORDER_WIDGET_HPP

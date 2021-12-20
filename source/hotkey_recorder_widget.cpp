@@ -1,6 +1,6 @@
-#include "hotkey_input_widget.hpp"
+#include "hotkey_recorder_widget.hpp"
 
-bool QHotkeyInput::WindowsHotkey::operator==(const WindowsHotkey& other) const {
+bool QHotkeyRecorder::WindowsHotkey::operator==(const WindowsHotkey& other) const {
     return    QtModifiers      == other.QtModifiers
            && QtModifierKeys   == other.QtModifierKeys
            && QtKey            == other.QtKey
@@ -9,11 +9,11 @@ bool QHotkeyInput::WindowsHotkey::operator==(const WindowsHotkey& other) const {
            && Vkid             == other.Vkid;
 }
 
-bool QHotkeyInput::WindowsHotkey::operator!=(const WindowsHotkey& other) const {
+bool QHotkeyRecorder::WindowsHotkey::operator!=(const WindowsHotkey& other) const {
     return !(*this==other);
 }
 
-QHotkeyInput::WindowsHotkey::operator QString() const {
+QHotkeyRecorder::WindowsHotkey::operator QString() const {
     QString modifier_sequence { WinApiKbModifierBitmaskToQString(Modifiers, false) };
 
     if(Vkid) {
@@ -23,7 +23,7 @@ QHotkeyInput::WindowsHotkey::operator QString() const {
     return modifier_sequence;
 }
 
-QHotkeyInput::WindowsHotkey::operator bool() const {
+QHotkeyRecorder::WindowsHotkey::operator bool() const {
     return    QtModifiers              != NULL
            || QtModifierKeys.size()    != NULL
            || QtKey                    != NULL
@@ -31,11 +31,11 @@ QHotkeyInput::WindowsHotkey::operator bool() const {
            || Vkid                     != NULL;
 }
 
-QString QHotkeyInput::WindowsHotkey::ToString() const {
+QString QHotkeyRecorder::WindowsHotkey::ToString() const {
     return QString(*this);
 }
 
-void QHotkeyInput::WindowsHotkey::Clear() {
+void QHotkeyRecorder::WindowsHotkey::Clear() {
     QtModifierKeys.clear();
 
     QtModifiers = Qt::KeyboardModifier::NoModifier;
@@ -46,7 +46,7 @@ void QHotkeyInput::WindowsHotkey::Clear() {
     Vkid         = NULL;
 }
 
-bool QHotkeyInput::event(QEvent* event) {
+bool QHotkeyRecorder::event(QEvent* event) {
     const auto& event_type { event->type() };
 
     if(event_type != QEvent::KeyPress && event_type != QEvent::KeyRelease) {
@@ -61,7 +61,7 @@ bool QHotkeyInput::event(QEvent* event) {
 
     if(event_type == QEvent::KeyRelease) {
         if(windowsHotkey.Vkid && !winapi_modifier && windowsHotkey != lastWindowsHotkeyEmitted) {
-            emit WindowsHotkeyRecorded(windowsHotkey);
+            emit HotkeyRecorded(windowsHotkey);
             lastWindowsHotkeyEmitted = windowsHotkey;
             mainKeyEstablished = true;
         } else if(!windowsHotkey.Vkid && winapi_modifier) {
@@ -97,31 +97,31 @@ bool QHotkeyInput::event(QEvent* event) {
     return true;
 }
 
-void QHotkeyInput::StartRecording() {
+void QHotkeyRecorder::StartRecording() {
     if(!isRecording) {
         isRecording = true;
     }
 }
 
-void QHotkeyInput::StopRecording() {
+void QHotkeyRecorder::StopRecording() {
     if(isRecording) {
         isRecording = false;
         ClearState();
     }
 }
 
-bool QHotkeyInput::IsRecording() const {
+bool QHotkeyRecorder::IsRecording() const {
     return isRecording;
 }
 
-void QHotkeyInput::ClearState() {
+void QHotkeyRecorder::ClearState() {
     mainKeyEstablished = false;
     lastWindowsHotkeyEmitted.Clear();
     windowsHotkey.Clear();
     clear();
 }
 
-QHotkeyInput::QHotkeyInput(QWidget* parent)
+QHotkeyRecorder::QHotkeyRecorder(QWidget* parent)
     :
       QLineEdit             { parent      },
       mainKeyEstablished    { false       },
