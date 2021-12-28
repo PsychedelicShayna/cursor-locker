@@ -723,7 +723,7 @@ void MainWindowDialog::loadAndApplyJsonSettings() {
                         << QString::number(bytes_read);
         }
     } else {
-        QMessageBox::information(this, "Generating New JSON File", "The required defaults.json file could not be found, generating a new one at this location:" + json_file_info.absoluteFilePath());
+        QMessageBox::information(this, "Generating New JSON File", "The required defaults.json file could not be found, generating a new one at this location: " + json_file_info.absoluteFilePath());
 
         qInfo() << "Generating a new JSON config file at this location, because an existing one could not be found:"
                 << json_file_info.absoluteFilePath();
