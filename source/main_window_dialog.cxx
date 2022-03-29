@@ -825,13 +825,20 @@ bool MainWindowDialog::nativeEvent(const QByteArray& event_type, void* message, 
                 << QString::number(msg->wParam, 16)
                 << ", lParam=0x"
                 << QString::number(msg->lParam, 16);
-
     }
 
     return QMainWindow::nativeEvent(event_type, message, result);
 }
 
+void MainWindowDialog::mousePressEvent(QMouseEvent* mouse_press_event) {
+    QWidget* focused_widget { QApplication::focusWidget() };
 
+    if(qobject_cast<HotkeyRecorderWidget*>(focused_widget) || qobject_cast<QLineEdit*>(focused_widget)) {
+        focused_widget->clearFocus();
+    }
+
+    return QMainWindow::mousePressEvent(mouse_press_event);
+}
 
 MainWindowDialog::MainWindowDialog(QWidget* parent)
     :

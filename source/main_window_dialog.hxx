@@ -190,16 +190,17 @@ protected:
     bool toggleCursorLockState();
 
 
-    // Implementation of virtual function to handle native Windows thread queue events, namely those sent by RegisterHotKey.
-    // If the event type matches a WM_HOTKEY event, then the HotkeyPressed signal is emitted.
-    bool nativeEvent(const QByteArray& event_type, void* message, qintptr* result) override;
+    // Override of nativeEvent in order to handle Windows message queue events, namely those sent when a hotkey
+    // that was previously registered using RegisterHotKey() was pressed. targetHotkeyWasPressed signal is emitted
+    // if the event type is WM_HOTKEY, and the hotkey ID and VKID match those used to register the hotkey.
+    Q_SIGNAL void targetHotkeyWasPressed();
+    virtual bool nativeEvent(const QByteArray& event_type, void* message, qintptr* result) override;
+
+
+    // Override of mousePressEvent, used to clear focus from input widgets when a widgetless area of the dialog is clicked.
+    virtual void mousePressEvent(QMouseEvent* mouse_press_event) override;
     // ----------------------------------------------------------------------------------------------------
 
-
-signals:
-    // Signal emitted by nativeEvent when it receives a registered hotkey pressed native event, and
-    // the hotkey's ID (wParam) matches amParamHotkeyId.
-    void targetHotkeyWasPressed();
 
 public:
     explicit MainWindowDialog(QWidget* parent = nullptr);
