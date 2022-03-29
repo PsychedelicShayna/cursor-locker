@@ -27,7 +27,7 @@ SOURCES +=                                      \
     source/process_scanner_dialog.cxx           \
     source/json_settings_dialog.cxx             \
     source/process_scanner.cpp                  \
-    source/vkid_table_dialog.cxx                \
+    source/vkid_table_widget_dialog.cxx
 
 HEADERS +=                                      \
     source/anonymous_event_filter.hpp           \
@@ -37,13 +37,13 @@ HEADERS +=                                      \
     source/process_scanner_dialog.hxx           \
     source/json_settings_dialog.hxx             \
     source/process_scanner.hpp                  \
-    source/vkid_table_dialog.hxx                \
+    source/vkid_table_widget_dialog.hxx
 
 FORMS +=                                \
     source/main_window_dialog.ui        \
     source/process_scanner_dialog.ui    \
     source/json_settings_dialog.ui      \
-    source/vkid_table_dialog.ui
+    source/vkid_table_widget_dialog.ui
 
 LIBS += \
     -lUser32

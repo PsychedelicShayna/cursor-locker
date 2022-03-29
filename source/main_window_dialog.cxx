@@ -255,15 +255,15 @@ void MainWindowDialog::updateHotkeyInputWithNewModifierBitmask(const quint32& ne
 
 // VKID Table Dialog
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindowDialog::spawnVkidTableDialog() {
-    if(vkidTableDialog == nullptr) {
-        vkidTableDialog = new VkidTableDialog { this };
+void MainWindowDialog::spawnVkidTableWidgetDialog() {
+    if(vkidTableWidgetDialog == nullptr) {
+        vkidTableWidgetDialog = new VkidTableWidgetDialog { this };
 
-        connect(vkidTableDialog, &VkidTableDialog::destroyed, [&]() -> void {
-            vkidTableDialog = nullptr;
+        connect(vkidTableWidgetDialog, &VkidTableWidgetDialog::destroyed, [this]() -> void {
+            vkidTableWidgetDialog = nullptr;
         });
 
-        vkidTableDialog->show();
+        vkidTableWidgetDialog->show();
     }
 }
 
@@ -370,7 +370,7 @@ void MainWindowDialog::setAmToHotkey() {
 
     insertActivationParameterWidget(ampwHotkeyRecorder, false);
     insertActivationParameterWidget(ampwHotkeyModifierDropdown, false);
-    insertActivationParameterWidget(btnSpawnVkidTableDialog);
+    insertActivationParameterWidget(btnSpawnVkidTableWidgetDialog);
 }
 
 void MainWindowDialog::unsetAmToHotkey() {
@@ -381,7 +381,7 @@ void MainWindowDialog::unsetAmToHotkey() {
 
     removeActivationParameterWidget(ampwHotkeyRecorder);
     removeActivationParameterWidget(ampwHotkeyModifierDropdown);
-    removeActivationParameterWidget(btnSpawnVkidTableDialog);
+    removeActivationParameterWidget(btnSpawnVkidTableWidgetDialog);
 }
 
 void MainWindowDialog::activateBecauseTargetHotkeyWasPressed() {
@@ -849,8 +849,8 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
       ampwHotkeyRecorder                  { new HotkeyRecorderWidget { this } },
 
 
-      vkidTableDialog                     { nullptr                           },
-      btnSpawnVkidTableDialog             { new QPushButton          { this } },
+      vkidTableWidgetDialog               { nullptr                           },
+      btnSpawnVkidTableWidgetDialog       { new QPushButton          { this } },
 
       ampHotkeyModifiersBitmask           { WINMOD_NULLMOD                    },
       ampHotkeyVkid                       { 0x000                             },
@@ -922,9 +922,9 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
     btnStartWindowGrabber->setEnabled(false);
     btnStartWindowGrabber->setHidden(true);
 
-    btnSpawnVkidTableDialog->setText("VKID Table");
-    btnSpawnVkidTableDialog->setEnabled(false);
-    btnSpawnVkidTableDialog->setHidden(true);
+    btnSpawnVkidTableWidgetDialog->setText("VKID Table");
+    btnSpawnVkidTableWidgetDialog->setEnabled(false);
+    btnSpawnVkidTableWidgetDialog->setHidden(true);
 
     setMaximumHeight(height());    // Disable vertical resizing.
 
@@ -954,8 +954,8 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
     connect(btnStartWindowGrabber,             &QPushButton::clicked,
             this,                              &MainWindowDialog::onWindowGrabberButtonClicked);
 
-    connect(btnSpawnVkidTableDialog,           &QPushButton::clicked,
-            this,                              &MainWindowDialog::spawnVkidTableDialog);
+    connect(btnSpawnVkidTableWidgetDialog,     &QPushButton::clicked,
+            this,                              &MainWindowDialog::spawnVkidTableWidgetDialog);
 
     connect(ui->btnSettings,                   &QPushButton::clicked,
             this,                              &MainWindowDialog::spawnJsonSettingsDialog);

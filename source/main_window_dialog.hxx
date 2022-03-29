@@ -37,10 +37,11 @@
 #include <QtCore/QResource>
 
 #include <hotkey_recorder_widget.hpp>
+#include <vkid_table_widget.hpp>
 
 #include "process_scanner_dialog.hxx"
 #include "json_settings_dialog.hxx"
-#include "vkid_table_dialog.hxx"
+#include "vkid_table_widget_dialog.hxx"
 
 #include "keyboard_modifier_list_widget.hpp"
 
@@ -91,9 +92,9 @@ protected:
 
     // VKID Table Dialog
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    VkidTableDialog*    vkidTableDialog;
-    QPushButton*        btnSpawnVkidTableDialog;
-    Q_SLOT void         spawnVkidTableDialog();
+    VkidTableWidgetDialog*    vkidTableWidgetDialog;
+    QPushButton*              btnSpawnVkidTableWidgetDialog;
+    Q_SLOT void               spawnVkidTableWidgetDialog();
 
 
     // Hotkey Activation Method
