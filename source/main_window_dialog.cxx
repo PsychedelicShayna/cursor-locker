@@ -773,14 +773,18 @@ void MainWindowDialog::setCursorLockEnabled(const bool& state) {
         HWND foreground_window_hwnd { GetForegroundWindow() };
         RECT foreground_window_rect;
 
-        GetWindowRect(foreground_window_hwnd, &foreground_window_rect);
-        ClipCursor(&foreground_window_rect);
+        if(foreground_window_hwnd != nullptr && IsWindow(foreground_window_hwnd)) {
+            if(GetWindowRect(foreground_window_hwnd, &foreground_window_rect)) {
+                ClipCursor(&foreground_window_rect);
+                lastCursorLockStateSet = state;
+            }
+        }
     } else {
         ClipCursor(nullptr);
+        lastCursorLockStateSet = state;
     }
-
-    lastCursorLockStateSet = state;
 }
+
 
 bool MainWindowDialog::toggleCursorLockState() {
     setCursorLockEnabled(lastCursorLockStateSet ^ true);
