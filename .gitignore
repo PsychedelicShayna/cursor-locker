@@ -4,6 +4,8 @@
 !resources/
 !screenshots/
 !indigo-stylesheet/
+!qt-hotkey-recorder-widget/
+!qt-vkid-table-widget/
 
 !.gitignore
 !LICENSE
