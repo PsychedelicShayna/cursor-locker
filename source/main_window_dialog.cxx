@@ -930,35 +930,35 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
 
     // Qt SIGNAL/SLOT Connections
     // ----------------------------------------------------------------------------------------------------
-    connect(ui->cbxActivationMethod,           SIGNAL(currentIndexChanged(int)),
-            this,                              SLOT(changeActivationMethod(int)));
+    connect(ui->cbxActivationMethod,           &QComboBox::currentIndexChanged,
+            this,                              static_cast<void(MainWindowDialog::*)(int)>(&MainWindowDialog::changeActivationMethod));
 
-    connect(ui->btnEditActivationParameter,    SIGNAL(clicked()),
-            this,                              SLOT(editActivationMethodParameter()));
+    connect(ui->btnEditActivationParameter,    &QPushButton::clicked,
+            this,                              &MainWindowDialog::editActivationMethodParameter);
 
-    connect(ui->btnClearActivationParameter,   SIGNAL(clicked()),
-            this,                              SLOT(clearActivationMethodParameter()));
+    connect(ui->btnClearActivationParameter,   &QPushButton::clicked,
+            this,                              &MainWindowDialog::clearActivationMethodParameter);
 
-    connect(ui->btnMuteSoundEffects,           SIGNAL(clicked()),
-            this,                              SLOT(toggleSoundEffectsMuted()));
+    connect(ui->btnMuteSoundEffects,           &QPushButton::clicked,
+            this,                              &MainWindowDialog::toggleSoundEffectsMuted);
 
-    connect(ampwHotkeyRecorder,                SIGNAL(HotkeyRecorded(HotkeyRecorderWidget::Hotkey)),
-            this,                              SLOT(updateUiWithRecordedHotkey(HotkeyRecorderWidget::Hotkey)));
+    connect(ampwHotkeyRecorder,                &HotkeyRecorderWidget::HotkeyRecorded,
+            this,                              &MainWindowDialog::updateUiWithRecordedHotkey);
 
-    connect(ampwHotkeyModifierDropdown,        SIGNAL(ModifierBitmaskChanged(const quint32&)),
-            this,                              SLOT(updateHotkeyInputWithNewModifierBitmask(const quint32&)));
+    connect(ampwHotkeyModifierDropdown,        &QKbModifierList::ModifierBitmaskChanged,
+            this,                              &MainWindowDialog::updateHotkeyInputWithNewModifierBitmask);
 
-    connect(windowGrabberTimer,                SIGNAL(timeout()),
-            this,                              SLOT(onWindowGrabberTimerTimeout()));
+    connect(windowGrabberTimer,                &QTimer::timeout,
+            this,                              &MainWindowDialog::onWindowGrabberTimerTimeout);
 
-    connect(btnStartWindowGrabber,             SIGNAL(clicked()),
-            this,                              SLOT(onWindowGrabberButtonClicked()));
+    connect(btnStartWindowGrabber,             &QPushButton::clicked,
+            this,                              &MainWindowDialog::onWindowGrabberButtonClicked);
 
-    connect(btnSpawnVkidTableDialog,           SIGNAL(clicked()),
-            this,                              SLOT(spawnVkidTableDialog()));
+    connect(btnSpawnVkidTableDialog,           &QPushButton::clicked,
+            this,                              &MainWindowDialog::spawnVkidTableDialog);
 
-    connect(ui->btnSettings,                   SIGNAL(clicked()),
-            this,                              SLOT(spawnJsonSettingsDialog()));
+    connect(ui->btnSettings,                   &QPushButton::clicked,
+            this,                              &MainWindowDialog::spawnJsonSettingsDialog);
 
     ui->btnSettings->installEventFilter(new AnonymousEventFilter<MainWindowDialog*> {
                                             [](QObject*, QEvent* event, MainWindowDialog* parent) -> bool {
