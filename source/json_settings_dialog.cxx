@@ -307,11 +307,11 @@ JsonSettingsDialog::JsonSettingsDialog(const QString& json_config_file_path, QWi
     hotkeyModifierList->setMinimumHeight(25);
     ui->hlayoutKeyboardShortcut->insertWidget(0, hotkeyModifierList);
 
-    connect(ui->btnCancel,          SIGNAL(clicked()),
-            this,                   SLOT(close()));
+    connect(ui->btnCancel,          &QPushButton::clicked,
+            this,                   &JsonSettingsDialog::close);
 
-    connect(ui->btnSaveDefaults,    SIGNAL(clicked()),
-            this,                   SLOT(saveUiSettingsToJsonFile()));
+    connect(ui->btnSaveDefaults,    &QPushButton::clicked,
+            this,                   &JsonSettingsDialog::saveUiSettingsToJsonFile);
 
     // QSS Stylesheet
     // ----------------------------------------------------------------------------------------------------

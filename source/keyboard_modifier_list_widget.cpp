@@ -120,9 +120,9 @@ QKbModifierList::QKbModifierList(QWidget* parent)
     setView(extendedQListView);
     setModel(standardItemModel);
 
-    connect(standardItemModel,    SIGNAL(itemChanged(QStandardItem*)),
-            this,                 SLOT(handleItemDataChanged(QStandardItem*)));
+    connect(standardItemModel,    &QStandardItemModel::itemChanged,
+            this,                 &QKbModifierList::handleItemDataChanged);
 
-    connect(extendedQListView,    SIGNAL(ModelItemClicked(QModelIndex)),
-            this,                 SLOT(handleModelItemClicked(QModelIndex)));
+    connect(extendedQListView,    &ExtendedQListView::ModelItemClicked,
+            this,                 &QKbModifierList::handleModelItemClicked);
 }
