@@ -10,7 +10,7 @@ void ExtendedQListView::mouseReleaseEvent(QMouseEvent* mouse_event) {
 }
 
 void QKbModifierList::handleItemDataChanged(QStandardItem* item) {
-    const WINAPI_MODIFIER& item_modifier { QStringToWinApiKbModifier(item->text()) };
+    const WINAPI_KEYBOARD_MODIFIER& item_modifier { QStringToWinApiKbModifier(item->text()) };
 
     if(item->isCheckable() && item_modifier != WINMOD_NULLMOD)  {
         emit ModifierItemCheckStateChanged(item_modifier, item->checkState());
@@ -53,7 +53,7 @@ void QKbModifierList::AddCheckableItem(const QString& label, const Qt::CheckStat
     InsertCheckableItem(count(), label, initial_state);
 }
 
-void QKbModifierList::AddModifierItem(const WINAPI_MODIFIER& modifier) {
+void QKbModifierList::AddModifierItem(const WINAPI_KEYBOARD_MODIFIER& modifier) {
     AddCheckableItem(WinApiKbModifierToQString(modifier, true));
 }
 
@@ -63,7 +63,7 @@ quint32 QKbModifierList::GetModifierCheckStateAsBitmask() const {
     for(qint32 i { 0 }; i < count(); ++i) {
         const auto& item { ItemAt(i) };
 
-        const WINAPI_MODIFIER& modifier {
+        const WINAPI_KEYBOARD_MODIFIER& modifier {
             QStringToWinApiKbModifier(item->text())
         };
 
@@ -83,7 +83,7 @@ void QKbModifierList::SetModifierCheckStateFromBitmask(const quint32& bitmask) {
     for(qint32 i { 0 }; i < count(); ++i) {
         const auto& item { ItemAt(i) };
 
-        const WINAPI_MODIFIER& item_modifier {
+        const WINAPI_KEYBOARD_MODIFIER& item_modifier {
             QStringToWinApiKbModifier(item->text())
         };
 
@@ -96,7 +96,7 @@ void QKbModifierList::SetModifierCheckStateFromBitmask(const quint32& bitmask) {
 }
 
 void QKbModifierList::AddItemsFromBitmask(const quint32& bitmask) {
-    for(const WINAPI_MODIFIER& modifier : WINAPI_MODIFIER_QLIST) {
+    for(const WINAPI_KEYBOARD_MODIFIER& modifier : ALL_WINAPI_KEYBOARD_MODIFIERS) {
         if(modifier & bitmask) {
             AddModifierItem(modifier);
         }
@@ -104,7 +104,7 @@ void QKbModifierList::AddItemsFromBitmask(const quint32& bitmask) {
 }
 
 QKbModifierList::QKbModifierList(const quint32& enabled_modifiers_bitmask) {
-    for(const auto& modifier : WINAPI_MODIFIER_QLIST) {
+    for(const auto& modifier : ALL_WINAPI_KEYBOARD_MODIFIERS) {
         if(modifier & enabled_modifiers_bitmask) {
             AddModifierItem(modifier);
         }

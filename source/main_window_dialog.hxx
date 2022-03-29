@@ -9,6 +9,12 @@
 #define UNICODE
 #endif
 
+#ifndef WIN32_MEAN_AND_LEAN
+#define WIN32_MEAN_AND_LEAN
+#endif
+
+#include <Windows.h>
+
 #include <QtGui/QMouseEvent>
 #include <QtCore/QEvent>
 
@@ -30,23 +36,14 @@
 #include <QtMultimedia/QSoundEffect>
 #include <QtCore/QResource>
 
-#ifndef WIN32_MEAN_AND_LEAN
-#define WIN32_MEAN_AND_LEAN
-#endif
+#include <hotkey_recorder_widget.hpp>
 
-#include <Windows.h>
-
-// Dialogs
 #include "process_scanner_dialog.hxx"
 #include "json_settings_dialog.hxx"
 #include "vkid_table_dialog.hxx"
 
-// Widgets
-#include "winapi_utilities.hpp"
-#include "hotkey_recorder_widget.hpp"
 #include "keyboard_modifier_list_widget.hpp"
 
-// Other
 #include "anonymous_event_filter.hpp"
 
 namespace Ui {
@@ -87,9 +84,9 @@ protected:
 
     // Hotkey Input / Recorder
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    QHotkeyRecorder*     ampwHotkeyRecorder;    // Instance of QHotkeyRecorder that records hotkeys entered into it, and updates the relevant UI components with the recorded hotkey information.
-    Q_SLOT void         updateUiWithRecordedWindowsHotkey(QHotkeyRecorder::WindowsHotkey);
-    Q_SLOT void         updateHotkeyInputWithNewModifierBitmask(const quint32& bitmask);
+    HotkeyRecorderWidget*     ampwHotkeyRecorder;    // Instance of HotkeyRecorderWidget that records hotkeys entered into it, and updates the relevant UI components with the recorded hotkey information.
+    Q_SLOT void               updateUiWithRecordedHotkey(HotkeyRecorderWidget::Hotkey);
+    Q_SLOT void               updateHotkeyInputWithNewModifierBitmask(const quint32& bitmask);
 
 
     // VKID Table Dialog

@@ -18,7 +18,6 @@
 #include <tuple>
 
 #include "keyboard_modifier_list_widget.hpp"
-#include "winapi_utilities.hpp"
 
 namespace Ui {
     class JsonSettingsDialog;

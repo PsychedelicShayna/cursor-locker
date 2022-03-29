@@ -9,7 +9,7 @@
 #include <QtGui/QStandardItem>
 #include <QtGui/QtEvents>
 
-#include "winapi_utilities.hpp"
+#include <hotkey_recorder_widget.hpp>
 
 class ExtendedQListView : public QListView {
 Q_OBJECT
@@ -25,7 +25,7 @@ class QKbModifierList : public QComboBox {
 Q_OBJECT
 
 signals:
-    void ModifierItemCheckStateChanged(const WINAPI_MODIFIER& modifier, const Qt::CheckState& new_state);
+    void ModifierItemCheckStateChanged(const WINAPI_KEYBOARD_MODIFIER& modifier, const Qt::CheckState& new_state);
     void ModifierBitmaskChanged(const quint32& bitmask);
 
 protected slots:
@@ -43,7 +43,7 @@ public:
 
     void InsertCheckableItem(const quint32& index, const QString& label, const Qt::CheckState& initial_state);
     void AddCheckableItem(const QString& label, const Qt::CheckState& initial_state = Qt::Unchecked);
-    void AddModifierItem(const WINAPI_MODIFIER& modifier);
+    void AddModifierItem(const WINAPI_KEYBOARD_MODIFIER& modifier);
 
     quint32 GetModifierCheckStateAsBitmask() const;
     void SetModifierCheckStateFromBitmask(const quint32& bitmask);

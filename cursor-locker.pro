@@ -9,9 +9,18 @@ QMAKE_CXXFLAGS += /std:c++17 /O2
 CONFIG(debug, debug|release): DEFINES += DEBUG
 CONFIG(release, debug|release): DEFINES += RELEASE
 
+# Include qt-hotkey-recorder-widget
+INCLUDEPATH += qt-hotkey-recorder-widget/source/
+SOURCES     += qt-hotkey-recorder-widget/source/hotkey_recorder_widget.cpp
+HEADERS     += qt-hotkey-recorder-widget/source/hotkey_recorder_widget.hpp
+
+# Include qt-vkid-table-widget
+INCLUDEPATH += qt-vkid-table-widget/source/
+SOURCES     += qt-vkid-table-widget/source/vkid_table_widget.cpp
+HEADERS     += qt-vkid-table-widget/source/vkid_table_widget.hpp
+
 SOURCES +=                                      \
     source/debugging.cpp                        \
-    source/hotkey_recorder_widget.cpp           \
     source/keyboard_modifier_list_widget.cpp    \
     source/main.cxx                             \
     source/main_window_dialog.cxx               \
@@ -19,19 +28,16 @@ SOURCES +=                                      \
     source/json_settings_dialog.cxx             \
     source/process_scanner.cpp                  \
     source/vkid_table_dialog.cxx                \
-    source/winapi_utilities.cpp
 
 HEADERS +=                                      \
     source/anonymous_event_filter.hpp           \
     source/debugging.hpp                        \
-    source/hotkey_recorder_widget.hpp           \
     source/keyboard_modifier_list_widget.hpp    \
     source/main_window_dialog.hxx               \
     source/process_scanner_dialog.hxx           \
     source/json_settings_dialog.hxx             \
     source/process_scanner.hpp                  \
     source/vkid_table_dialog.hxx                \
-    source/winapi_utilities.hpp
 
 FORMS +=                                \
     source/main_window_dialog.ui        \

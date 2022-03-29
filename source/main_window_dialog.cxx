@@ -237,7 +237,7 @@ void MainWindowDialog::handleModifierListBitmaskChanged(const quint32& bitmask) 
 
 // Hotkey Input / Recorder
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void MainWindowDialog::updateUiWithRecordedWindowsHotkey(QHotkeyRecorder::WindowsHotkey windows_hotkey) {
+void MainWindowDialog::updateUiWithRecordedHotkey(HotkeyRecorderWidget::Hotkey windows_hotkey) {
     const QString& hex_vkid { QString { "0x%1" }.arg(QString::number(windows_hotkey.Vkid, 16), 2, QChar { '0' }) };
 
     ui->linActivationParameter->setText(hex_vkid);
@@ -837,50 +837,50 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
     :
       // Debug Console & Related Widgets Initialization
 
-      QMainWindow                         { parent                       },
-      ui                                  { new Ui::MainWindowDialog     },
+      QMainWindow                         { parent                            },
+      ui                                  { new Ui::MainWindowDialog          },
 
-      styleSheetFilePath                  { "styles/indigo.qss"          },
+      styleSheetFilePath                  { "styles/indigo.qss"               },
 
-      selectedActivationMethod            { ACTIVATION_METHOD::NOTHING   },
+      selectedActivationMethod            { ACTIVATION_METHOD::NOTHING        },
 
       // Hotkey activation method member variables initialization
-      ampwHotkeyModifierDropdown          { new QKbModifierList { this } },
-      ampwHotkeyRecorder                  { new QHotkeyRecorder    { this } },
+      ampwHotkeyModifierDropdown          { new QKbModifierList      { this } },
+      ampwHotkeyRecorder                  { new HotkeyRecorderWidget { this } },
 
 
-      vkidTableDialog                     { nullptr                      },
-      btnSpawnVkidTableDialog             { new QPushButton     { this } },
+      vkidTableDialog                     { nullptr                           },
+      btnSpawnVkidTableDialog             { new QPushButton          { this } },
 
-      ampHotkeyModifiersBitmask           { WINMOD_NULLMOD               },
-      ampHotkeyVkid                       { 0x000                        },
-      ampHotkeyId                         { 0x1A4                        },
+      ampHotkeyModifiersBitmask           { WINMOD_NULLMOD                    },
+      ampHotkeyVkid                       { 0x000                             },
+      ampHotkeyId                         { 0x1A4                             },
 
 
       // Process scanner member variables initialization.
-      processScannerDialog                { nullptr                      },     // ProcessScannerDialog instance, must be nullptr as spawnProcessScannerDialog takes care of construction and destruction.
-      btnSpawnProcessScanner              { new QPushButton     { this } },     // QPushButton connected to spawnProcessScannerDialog further down in the constructor.
+      processScannerDialog                { nullptr                           },     // ProcessScannerDialog instance, must be nullptr as spawnProcessScannerDialog takes care of construction and destruction.
+      btnSpawnProcessScanner              { new QPushButton          { this } },     // QPushButton connected to spawnProcessScannerDialog further down in the constructor.
 
-      timedActivationMethodTimer          { new QTimer          { this } },
+      timedActivationMethodTimer          { new QTimer               { this } },
 
       // Process Image Name
-      processHasBeenFound                 { false                        },
-      amParamProcessImageName             { QString { "" }               },
+      processHasBeenFound                 { false                             },
+      amParamProcessImageName             { QString { "" }                    },
 
       // Foreground Window Title
-      windowTitleHasBeenFound             { false                        },
-      amParamForegroundWindowTitle        { QString { "" }               },
+      windowTitleHasBeenFound             { false                             },
+      amParamForegroundWindowTitle        { QString { "" }                    },
 
       // Foreground Window Grabber
-      windowGrabberTimerMaxTimeouts       { 15                           },
-      windowGrabberTimerTimeoutCounter    { NULL                         },
-      windowGrabberTimer                  { new QTimer          { this } },
-      btnStartWindowGrabber               { new QPushButton     { this } },
+      windowGrabberTimerMaxTimeouts       { 15                                },
+      windowGrabberTimerTimeoutCounter    { NULL                              },
+      windowGrabberTimer                  { new QTimer               { this } },
+      btnStartWindowGrabber               { new QPushButton          { this } },
 
-      jsonConfigFilePath                  { "./defaults.json"            },
-      jsonSettingsDialog                  { nullptr                      },
+      jsonConfigFilePath                  { "./defaults.json"                 },
+      jsonSettingsDialog                  { nullptr                           },
 
-      soundEffectsMuted                   { false                        }
+      soundEffectsMuted                   { false                             }
 
 {
     ui->setupUi(this);
@@ -942,8 +942,8 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
     connect(ui->btnMuteSoundEffects,           SIGNAL(clicked()),
             this,                              SLOT(toggleSoundEffectsMuted()));
 
-    connect(ampwHotkeyRecorder,                SIGNAL(HotkeyRecorded(QHotkeyRecorder::WindowsHotkey)),
-            this,                              SLOT(updateUiWithRecordedWindowsHotkey(QHotkeyRecorder::WindowsHotkey)));
+    connect(ampwHotkeyRecorder,                SIGNAL(HotkeyRecorded(HotkeyRecorderWidget::Hotkey)),
+            this,                              SLOT(updateUiWithRecordedHotkey(HotkeyRecorderWidget::Hotkey)));
 
     connect(ampwHotkeyModifierDropdown,        SIGNAL(ModifierBitmaskChanged(const quint32&)),
             this,                              SLOT(updateHotkeyInputWithNewModifierBitmask(const quint32&)));
