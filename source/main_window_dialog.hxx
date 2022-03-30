@@ -44,12 +44,12 @@
 #include "vkid_table_widget_dialog.hxx"
 
 #include "keyboard_modifier_list_widget.hpp"
-
 #include "anonymous_event_filter.hpp"
 
-namespace Ui {
-    class MainWindowDialog;
-}
+
+QT_BEGIN_NAMESPACE
+namespace Ui { class MainWindowDialog; }
+QT_END_NAMESPACE
 
 enum struct ACTIVATION_METHOD;
 
