@@ -5,14 +5,13 @@
 !screenshots/
 !submodules/
 
+!release/
+release/*
+!release/create_release_archive.py
+
 !.gitignore
 !.gitattributes
 !LICENSE
 !README.md
-
 !*.pro
-!*.qrc
-*.user
 
-*.py
-*.txt
