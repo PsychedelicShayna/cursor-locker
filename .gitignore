@@ -6,6 +6,7 @@
 !submodules/
 
 !.gitignore
+!.gitattributes
 !LICENSE
 !README.md
 
