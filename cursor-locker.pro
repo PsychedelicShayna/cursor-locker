@@ -49,4 +49,4 @@ LIBS += \
     -lUser32
 
 RESOURCES += \
-    resources.qrc
+    resources/resources.qrc

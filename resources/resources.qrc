@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/sounds">
+        <file alias="lock-activated.wav">sounds/lock-activated.wav</file>
+        <file alias="lock-deactivated.wav">sounds/lock-deactivated.wav</file>
+        <file alias="window-grabber-tick.wav">sounds/window-grabber-tick.wav</file>
+    </qresource>
+</RCC>
