@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>512</width>
-    <height>122</height>
+    <height>125</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -81,7 +81,7 @@
           <widget class="QPushButton" name="btnSettings">
            <property name="minimumSize">
             <size>
-             <width>0</width>
+             <width>90</width>
              <height>25</height>
             </size>
            </property>
@@ -94,7 +94,7 @@
           <widget class="QPushButton" name="btnMuteSoundEffects">
            <property name="minimumSize">
             <size>
-             <width>0</width>
+             <width>90</width>
              <height>25</height>
             </size>
            </property>
@@ -127,7 +127,7 @@
           <widget class="QPushButton" name="btnEditActivationParameter">
            <property name="minimumSize">
             <size>
-             <width>0</width>
+             <width>90</width>
              <height>25</height>
             </size>
            </property>
@@ -140,7 +140,7 @@
           <widget class="QPushButton" name="btnClearActivationParameter">
            <property name="minimumSize">
             <size>
-             <width>0</width>
+             <width>90</width>
              <height>25</height>
             </size>
            </property>

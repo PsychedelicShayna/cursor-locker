@@ -924,14 +924,17 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
     btnSpawnProcessScanner->setText("Select");
     btnSpawnProcessScanner->setEnabled(false);
     btnSpawnProcessScanner->setHidden(true);
+    btnSpawnProcessScanner->setMinimumWidth(90);
 
     btnStartWindowGrabber->setText("Grab");
     btnStartWindowGrabber->setEnabled(false);
     btnStartWindowGrabber->setHidden(true);
+    btnStartWindowGrabber->setMinimumWidth(90);
 
     btnSpawnVkidTableWidgetDialog->setText("VKID Table");
     btnSpawnVkidTableWidgetDialog->setEnabled(false);
     btnSpawnVkidTableWidgetDialog->setHidden(true);
+    btnSpawnVkidTableWidgetDialog->setMinimumWidth(90);
 
     setMaximumHeight(height());    // Disable vertical resizing.
 
