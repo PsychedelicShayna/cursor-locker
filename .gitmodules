@@ -11,3 +11,7 @@
 	branch = include
 [submodule ".\\qt-vkid-table-widget\\"]
 	branch = include
+[submodule "submodules/qt-process-scanner-widget"]
+	path = submodules/qt-process-scanner-widget
+	url = https://github.com/PsychedelicShayna/qt-process-scanner-widget
+	branch = include
