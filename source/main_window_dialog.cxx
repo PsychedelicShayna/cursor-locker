@@ -403,7 +403,7 @@ void MainWindowDialog::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE proc
     if(processScannerDialog == nullptr) {
         qInfo() << "Constructing new ProcessScannerDialog instance.";
 
-        processScannerDialog = new ProcessScannerDialog(process_scanner_scope, this);
+        processScannerDialog = new ProcessScannerDialog { this, process_scanner_scope };
 
         ui->btnEditActivationParameter->setEnabled(false);
         btnStartWindowGrabber->setEnabled(false);
@@ -414,7 +414,7 @@ void MainWindowDialog::spawnProcessScannerDialog(ProcessScanner::SCAN_SCOPE proc
             processScannerDialog = nullptr;
         });
 
-        connect(processScannerDialog, &ProcessScannerDialog::treeSelectionMade, [&](const QString& selection) -> void {
+        connect(processScannerDialog, &ProcessScannerDialog::treeSelectionMade, [&](QString selection, HWND window_handle) -> void {
             ui->linActivationParameter->setText(selection);
             delete processScannerDialog;
             processScannerDialog = nullptr;
