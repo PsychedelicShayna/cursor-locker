@@ -20,9 +20,9 @@ HEADERS     += submodules/qt-hotkey-recorder-widget/hotkey_recorder_widget.hpp
 
 # SUBMODULE: Qt Vkid Table Widget
 # ==================================================
-INCLUDEPATH += submodules/qt-vkid-table-widget/source/
-SOURCES     += submodules/qt-vkid-table-widget/source/vkid_table_widget.cpp
-HEADERS     += submodules/qt-vkid-table-widget/source/vkid_table_widget.hpp
+INCLUDEPATH += submodules/qt-vkid-table-widget/
+SOURCES     += submodules/qt-vkid-table-widget/vkid_table_widget.cpp
+HEADERS     += submodules/qt-vkid-table-widget/vkid_table_widget.hpp
 # ==================================================
 
 
