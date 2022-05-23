@@ -9,3 +9,5 @@
 	url = https://github.com/PsychedelicShayna/qt-vkid-table-widget
 [submodule ".\\qt-hotkey-recorder-widget\\"]
 	branch = include
+[submodule ".\\qt-vkid-table-widget\\"]
+	branch = include
