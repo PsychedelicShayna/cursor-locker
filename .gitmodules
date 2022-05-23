@@ -7,3 +7,5 @@
 [submodule "qt-vkid-table-widget"]
 	path = submodules/qt-vkid-table-widget
 	url = https://github.com/PsychedelicShayna/qt-vkid-table-widget
+[submodule ".\\qt-hotkey-recorder-widget\\"]
+	branch = include
