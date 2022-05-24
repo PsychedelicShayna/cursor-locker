@@ -852,7 +852,7 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
       selectedActivationMethod            { ACTIVATION_METHOD::NOTHING        },
 
       // Hotkey activation method member variables initialization
-      ampwHotkeyModifierDropdown          { new QKbModifierList      { this } },
+      ampwHotkeyModifierDropdown          { new KbModifierListWidget { this } },
       ampwHotkeyRecorder                  { new HotkeyRecorderWidget { this } },
 
 
@@ -955,7 +955,7 @@ MainWindowDialog::MainWindowDialog(QWidget* parent)
     connect(ampwHotkeyRecorder,                &HotkeyRecorderWidget::HotkeyRecorded,
             this,                              &MainWindowDialog::updateUiWithRecordedHotkey);
 
-    connect(ampwHotkeyModifierDropdown,        &QKbModifierList::ModifierBitmaskChanged,
+    connect(ampwHotkeyModifierDropdown,        &KbModifierListWidget::ModifierBitmaskChanged,
             this,                              &MainWindowDialog::updateHotkeyInputWithNewModifierBitmask);
 
     connect(windowGrabberTimer,                &QTimer::timeout,

@@ -52,7 +52,7 @@ private:
     Ui::JsonSettingsDialog* ui;
     QString jsonConfigFilePath;
 
-    QKbModifierList* hotkeyModifierList;
+    KbModifierListWidget* hotkeyModifierList;
 
 protected slots:
     void loadUiSettingsFromJsonFile();

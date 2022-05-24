@@ -79,8 +79,8 @@ protected:
 
     // Keyboard Modifier Dropdown
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    QKbModifierList*    ampwHotkeyModifierDropdown;
-    Q_SLOT void         handleModifierListBitmaskChanged(const quint32& bitmask);
+    KbModifierListWidget*    ampwHotkeyModifierDropdown;
+    Q_SLOT void              handleModifierListBitmaskChanged(const quint32& bitmask);
 
 
     // Hotkey Input / Recorder

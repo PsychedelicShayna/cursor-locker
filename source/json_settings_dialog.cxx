@@ -282,7 +282,7 @@ JsonSettingsDialog::JsonSettingsDialog(const QString& json_config_file_path, QWi
       QDialog               { parent                       },
       ui                    { new Ui::JsonSettingsDialog   },
       jsonConfigFilePath    { json_config_file_path        },
-      hotkeyModifierList    { new QKbModifierList { this } }
+      hotkeyModifierList    { new KbModifierListWidget { this } }
 {
     ui->setupUi(this);
 
