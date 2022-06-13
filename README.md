@@ -1,6 +1,8 @@
 # Cursor Locker
 This is a simple program that confines your cursor to any game or application window, for games that do not natively do so and cause problems with multiple monitors where the cursor might escape onto the second or third monitor and issue unintended inputs. 
 
+![code-quality-score](https://api.codiga.io/project/33791/score/svg)
+
 ## Downloads
 You can download a pre-compiled build in the [releases section](https://github.com/MisanthropicShayna/CursorLocker/releases), which has been compiled with MSVC19 using Qt version 6.2.1. While Qt is cross-platform, the project relies on WinAPI to function, therefore only a Windows build is available.
 
