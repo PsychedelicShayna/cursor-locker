@@ -1,5 +1,4 @@
 # Cursor Locker
-[![code-quality-score](https://api.codiga.io/project/33791/score/svg)](https://app.codiga.io/hub/project/33791/cursor-locker) [![code-grade](https://api.codiga.io/project/33791/status/svg)](https://app.codiga.io/hub/project/33791/cursor-locker)
 
 This is a program that confines your cursor to any game or application window, for games that do not natively do so and cause problems with multiple monitors where the cursor might escape onto the second or third monitor and issue unintended inputs. 
 
